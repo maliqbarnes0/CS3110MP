@@ -1,0 +1,4 @@
+(executable
+ (public_name group92)
+ (name main)
+ (libraries group92))
