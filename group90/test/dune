@@ -1,0 +1,4 @@
+(test
+ (name test_group90)
+ (libraries group90 ounit2)
+)
