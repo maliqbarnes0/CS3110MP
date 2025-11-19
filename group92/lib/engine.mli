@@ -7,7 +7,7 @@ val g : float
 
 (** The type representing a world (collection of celestial bodies).
     A world is a list of bodies that interact gravitationally. *)
-type w 
+type w = Body.b list 
 
 (** [gravitational_force b1 ~by:b2] computes the gravitational force vector
     exerted on body [b1] by body [b2].
