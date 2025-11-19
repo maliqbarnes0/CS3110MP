@@ -78,7 +78,7 @@ let rec simulation_loop world =
   synchronize ();
 
   (* Update physics *)
-  let new_world = Engine.step ~dt:1. world in
+  let new_world = Engine.step ~dt:2. world in
 
   (* Check for exit *)
   if button_down () then begin
