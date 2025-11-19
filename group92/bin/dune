@@ -1,4 +1,4 @@
 (executable
  (public_name group92)
  (name main)
- (libraries group92))
+ (libraries group92 graphics unix))
