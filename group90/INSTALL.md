@@ -1,12 +1,15 @@
 # N-Body Physics Simulation - Graphics Setup Guide
 
-## Prerequisites
+This document provides instructions for installing dependencies and building the N-Body Physics Simulation project.
 
-To run the graphical visualization, you need to install the OCaml Graphics library and its dependencies.
+## Prerequisites and Installation
+
+To run the graphical visualization, you need the **OCaml Graphics library** and its system dependencies (X11).
 
 ### macOS Installation
 
 1. **Install XQuartz** (required for X11 support):
+
    ```bash
    brew install --cask xquartz
    ```
@@ -14,20 +17,15 @@ To run the graphical visualization, you need to install the OCaml Graphics libra
 2. **Log out and log back in** (or restart your Mac) for XQuartz to work properly.
 
 3. **Install the OCaml Graphics library**:
+
    ```bash
    opam install graphics
-   ```
-
-4. **Build and run the project**:
-   ```bash
-   cd "/Users/natip/3110/Final Proj/CS3110MP/group92"
-   dune build
-   dune exec group92
    ```
 
 ### Linux Installation
 
 1. **Install X11 development libraries**:
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install libx11-dev libxft-dev
@@ -37,23 +35,18 @@ To run the graphical visualization, you need to install the OCaml Graphics libra
    ```
 
 2. **Install the OCaml Graphics library**:
+
    ```bash
    opam install graphics
    ```
 
-3. **Build and run the project**:
-   ```bash
-   dune build
-   dune exec group92
-   ```
-
 ## Quick Start (After Installation)
 
-Once graphics is installed, simply run:
+Once dependencies are installed, assuming you are in the root directory of the dune project (where dune-project and INSTALL.md are located), simply run the following:
 
 ```bash
-cd "/Users/natip/3110/Final Proj/CS3110MP/group92"
-dune exec group92
+dune build
+dune exec group90
 ```
 
 ## Controls
@@ -79,14 +72,17 @@ Once the simulation window opens:
 ## Troubleshooting
 
 ### "Library graphics not found"
+
 - Make sure you've installed XQuartz and logged out/in
 - Run: `opam install graphics`
 
 ### Window doesn't open
+
 - Make sure XQuartz is running (check Applications > Utilities > XQuartz)
 - Try logging out and back in after installing XQuartz
 
 ### Simulation is too slow/fast
+
 - Use **+** and **-** keys to adjust simulation speed
 - The default speed is 1 day per frame at 60 FPS
 
