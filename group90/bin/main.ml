@@ -4,29 +4,23 @@ open Group90
 (* Unit scaling for GUI visualization *)
 (*
    The engine uses the real gravitational constant G = 6.67e-11 m³/(kg·s²)
-   To make this work with pixel coordinates, we scale the masses:
+   To make this work with pixel coordinates, we scale the masses by 1/G:
 
-   Scale factor = 1.5e13 (to make G*scaled_mass behave like G_effective = 1000)
-   This means: 1 simulation mass unit ≈ 1.5e13 kg in "real" units
+   mass_scaled = desired_strength / G
 
-   With this scaling:
-   - Positions are in pixels (treat as "meters" for physics)
+   This way: G * mass_scaled = desired_strength
+   For example: mass1 = 1000/G means G*mass1 = 1000
+
+   With this approach:
+   - Positions are in pixels
    - Velocities are in pixels/second
-   - Masses are scaled up by the factor below
+   - The effective gravitational strength equals the desired value directly
 *)
 let create_system () =
-  (* Mass scaling factor to make real G work with pixel coordinates *)
-  let g_real = 6.67e-11 in
-  let g_effective = 1000. in (* desired effective G for visible orbits *)
-  let mass_scale = g_effective /. g_real in
-
-  (* Display masses (what we conceptually think of) *)
-  let mass1_display = 1000. in
-  let mass2_display = 100. in
-
-  (* Scaled masses for physics engine *)
-  let mass1 = mass1_display *. mass_scale in
-  let mass2 = mass2_display *. mass_scale in
+  (* Masses *)
+  let g = 6.67e-11 in
+  let mass1 = 1000. *.  (1. /.g) in
+  let mass2 = 100. *.  (1. /.g) in
 
   let separation = 300. in (* pixels *)
 
@@ -34,13 +28,13 @@ let create_system () =
   let com_x = 400. in
   let com_y = 300. in
 
-  (* Distances from center of mass (using display masses for ratio) *)
-  let r1 = separation *. mass2_display /. (mass1_display +. mass2_display) in
-  let r2 = separation *. mass1_display /. (mass1_display +. mass2_display) in
+  (* Distances from center of mass *)
+  let r1 = separation *. mass2 /. (mass1 +. mass2) in
+  let r2 = separation *. mass1 /. (mass1 +. mass2) in
 
-  (* Calculate orbital velocities using real G with scaled masses *)
+  (* Calculate orbital velocities using G from engine *)
   let total_mass = mass1 +. mass2 in
-  let v_rel = Float.sqrt (g_real *. total_mass /. separation) in
+  let v_rel = Float.sqrt (g *. total_mass /. separation) in
   let v1 = v_rel *. mass2 /. total_mass in
   let v2 = v_rel *. mass1 /. total_mass in
 
@@ -84,7 +78,7 @@ let rec simulation_loop world =
   synchronize ();
 
   (* Update physics *)
-  let new_world = Engine.step ~dt:0.1 world in
+  let new_world = Engine.step ~dt:2. world in
 
   (* Check for exit *)
   if button_down () then begin
