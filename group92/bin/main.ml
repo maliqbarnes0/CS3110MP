@@ -54,6 +54,19 @@ let body_colors = [|
 let get_body_color i =
   body_colors.(i mod Array.length body_colors)
 
+(** Planet names for labeling *)
+let planet_names = [|
+  "Sun";
+  "Mercury";
+  "Venus";
+  "Earth";
+  "Mars";
+  "Jupiter";
+  "Saturn";
+  "Uranus";
+  "Neptune"
+|]
+
 (** Convert world coordinates to screen coordinates *)
 let world_to_screen (cam : camera) (pos : Vec3.v) : int * int =
   let screen_center_x = Config.width / 2 in
@@ -99,6 +112,22 @@ let draw_body (cam : camera) (body : Body.b) (color : int) : unit =
       ((color lsr 8) land 0xFF)
       (color land 0xFF));
     draw_circle sx sy (radius + 1);
+  end
+
+(** Draw a label for a body *)
+let draw_label (cam : camera) (body : Body.b) (name : string) : unit =
+  let pos = Body.pos body in
+  let (sx, sy) = world_to_screen cam pos in
+
+  (* Only draw if on screen *)
+  if sx >= -50 && sx <= Config.width + 50 &&
+     sy >= -50 && sy <= Config.height + 50 then begin
+    let radius = body_radius (Body.mass body) in
+
+    (* Draw label slightly above and to the right of the body *)
+    set_color white;
+    moveto (sx + radius + 5) (sy + radius + 5);
+    draw_string name;
   end
 
 (** Draw trail for a body *)
@@ -211,6 +240,12 @@ let render (st : state) : unit =
   (* Draw bodies *)
   List.iteri (fun i body ->
     draw_body st.camera body (get_body_color i)
+  ) world_list;
+
+  (* Draw labels *)
+  List.iteri (fun i body ->
+    if i < Array.length planet_names then
+      draw_label st.camera body planet_names.(i)
   ) world_list;
 
   (* Draw UI *)
@@ -330,6 +365,22 @@ let create_solar_system () : Engine.w =
     ~pos:(make 0.0 0.0 0.0)
     ~vel:(make 0.0 0.0 0.0) in
 
+  (* Mercury *)
+  let mercury_dist = 5.791e10 in
+  let mercury_vel = 47870.0 in
+  let mercury = Body.make
+    ~mass:3.285e23
+    ~pos:(make mercury_dist 0.0 0.0)
+    ~vel:(make 0.0 mercury_vel 0.0) in
+
+  (* Venus *)
+  let venus_dist = 1.082e11 in
+  let venus_vel = 35020.0 in
+  let venus = Body.make
+    ~mass:4.867e24
+    ~pos:(make venus_dist 0.0 0.0)
+    ~vel:(make 0.0 venus_vel 0.0) in
+
   (* Earth *)
   let earth_dist = 1.496e11 in (* 1 AU *)
   let earth_vel = 29780.0 in   (* ~30 km/s *)
@@ -346,23 +397,39 @@ let create_solar_system () : Engine.w =
     ~pos:(make mars_dist 0.0 0.0)
     ~vel:(make 0.0 mars_vel 0.0) in
 
-  (* Venus *)
-  let venus_dist = 1.082e11 in
-  let venus_vel = 35020.0 in
-  let venus = Body.make
-    ~mass:4.867e24
-    ~pos:(make venus_dist 0.0 0.0)
-    ~vel:(make 0.0 venus_vel 0.0) in
+  (* Jupiter *)
+  let jupiter_dist = 7.785e11 in
+  let jupiter_vel = 13070.0 in
+  let jupiter = Body.make
+    ~mass:1.898e27
+    ~pos:(make jupiter_dist 0.0 0.0)
+    ~vel:(make 0.0 jupiter_vel 0.0) in
 
-  (* Mercury *)
-  let mercury_dist = 5.791e10 in
-  let mercury_vel = 47870.0 in
-  let mercury = Body.make
-    ~mass:3.285e23
-    ~pos:(make mercury_dist 0.0 0.0)
-    ~vel:(make 0.0 mercury_vel 0.0) in
+  (* Saturn *)
+  let saturn_dist = 1.432e12 in
+  let saturn_vel = 9690.0 in
+  let saturn = Body.make
+    ~mass:5.683e26
+    ~pos:(make saturn_dist 0.0 0.0)
+    ~vel:(make 0.0 saturn_vel 0.0) in
 
-  [sun; mercury; venus; earth; mars]
+  (* Uranus *)
+  let uranus_dist = 2.867e12 in
+  let uranus_vel = 6810.0 in
+  let uranus = Body.make
+    ~mass:8.681e25
+    ~pos:(make uranus_dist 0.0 0.0)
+    ~vel:(make 0.0 uranus_vel 0.0) in
+
+  (* Neptune *)
+  let neptune_dist = 4.515e12 in
+  let neptune_vel = 5430.0 in
+  let neptune = Body.make
+    ~mass:1.024e26
+    ~pos:(make neptune_dist 0.0 0.0)
+    ~vel:(make 0.0 neptune_vel 0.0) in
+
+  [sun; mercury; venus; earth; mars; jupiter; saturn; uranus; neptune]
 
 (** Main entry point *)
 let () =
