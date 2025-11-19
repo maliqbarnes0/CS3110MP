@@ -1,4 +1,5 @@
-let g = 6.67e-11
+(* Scaled gravitational constant for pixel-based simulation *)
+let g = 1000.
 
 type w = Body.b list
 
