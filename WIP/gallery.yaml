@@ -21,7 +21,7 @@ title: "3-caml problem"
 # OK if this is a Cornell Github link, but public gallery viewers won't be able to see it.
 git-repo: https://github.com/Anthony-PB/CS3110MP
 # Replace the URL with your own demo video.
-demo-video-url: "N/A"
+demo-video-url: https://youtu.be/sa8VyCwIu2c
 # Write a short, attention-grabbing description of your project.
 desc: >
   Our project is a 3-Body Orbital Simulator that tackles the famous, unsolvable physics 
