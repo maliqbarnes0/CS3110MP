@@ -59,7 +59,7 @@ let draw_body body color radius =
   set_color color;
   fill_circle x y radius
 
-let rec simulation_loop world =
+let rec simulation_loop world dt paused =
   (* Clear screen *)
   set_color black;
   fill_rect 0 0 800 600;
@@ -71,14 +71,36 @@ let rec simulation_loop world =
   moveto 25 570;
   draw_string "EXIT";
 
+  (* Draw speed info *)
+  moveto 650 570;
+  draw_string (Printf.sprintf "Speed: %.1fx" dt);
+  moveto 630 550;
+  draw_string "Z: faster  X: slower";
+  moveto 630 530;
+  draw_string (if paused then "P: unpause" else "P: pause");
+
   (* Draw the 2 bodies *)
   draw_body (List.nth world 0) (rgb 255 200 100) 20;
   draw_body (List.nth world 1) (rgb 100 150 255) 12;
 
   synchronize ();
 
-  (* Update physics *)
-  let new_world = Engine.step ~dt:2. world in
+  (* Update physics only if not paused *)
+  let new_world = if paused then world else Engine.step ~dt world in
+
+  (* Check for key presses to adjust simulation speed:
+     Z: speed up by 1.5x (max 20.0)
+     X: slow down by 1.5x (min 0.1)
+     P: toggle pause *)
+  let new_dt, new_paused =
+    if key_pressed () then
+      match read_key () with
+      | 'z' | 'Z' -> (min (dt *. 1.5) 100.0, paused)
+      | 'x' | 'X' -> (max (dt /. 1.5) 0.1, paused)
+      | 'p' | 'P' -> (dt, not paused)
+      | _ -> (dt, paused)
+    else (dt, paused)
+  in
 
   (* Check for exit *)
   if button_down () then begin
@@ -86,12 +108,12 @@ let rec simulation_loop world =
     if x >= 10 && x <= 90 && y >= 560 && y <= 590 then ()
     else begin
       Unix.sleepf 0.016;
-      simulation_loop new_world
+      simulation_loop new_world new_dt new_paused
     end
   end
   else begin
     Unix.sleepf 0.016;
-    simulation_loop new_world
+    simulation_loop new_world new_dt new_paused
   end
 
 let () =
@@ -100,6 +122,6 @@ let () =
   auto_synchronize false;
 
   let world = create_system () in
-  simulation_loop world;
+  simulation_loop world 2.0 false;
 
   close_graph ()
