@@ -1,6 +1,6 @@
-# N-Body Physics Simulation - Graphics Setup Guide
+# 2-Body Gravity Simulation - Graphics Setup Guide
 
-This document provides instructions for installing dependencies and building the N-Body Physics Simulation project.
+This document provides instructions for installing dependencies and building the 2-Body Gravity Simulation project.
 
 ## Prerequisites and Installation
 
@@ -53,21 +53,18 @@ dune exec group90
 
 Once the simulation window opens:
 
-- **SPACE** - Pause/Resume the simulation
-- **+/-** - Speed up/slow down time
-- **Z/X** - Zoom in/out
-- **Arrow keys** - Pan the camera (not yet implemented)
-- **R** - Reset camera view
-- **Q** or **ESC** - Quit
+- **P** - Pause/Resume the simulation
+- **Z** - Speed up time (1.5x, max 100x)
+- **X** - Slow down time (1.5x, min 0.1x)
+- **Click EXIT button** - Quit the simulation
 
 ## Features
 
-- Real-time N-body gravitational simulation
-- 2D visualization of 3D space (top-down view)
-- Interactive controls for time, zoom, and camera
-- Orbital trails showing body paths
-- Pre-configured solar system example (Sun, Mercury, Venus, Earth, Mars)
-- Live statistics display
+- Real-time 2-body gravitational simulation
+- 2D visualization with orbital mechanics
+- Interactive speed controls
+- Two orbiting bodies with realistic physics
+- Live speed display
 
 ## Troubleshooting
 
@@ -83,14 +80,14 @@ Once the simulation window opens:
 
 ### Simulation is too slow/fast
 
-- Use **+** and **-** keys to adjust simulation speed
-- The default speed is 1 day per frame at 60 FPS
+- Use **Z** and **X** keys to adjust simulation speed
+- The default speed is 2.0x
 
 ## Customization
 
 You can modify the simulation by editing [bin/main.ml](bin/main.ml):
 
-- Change `Config.width` and `Config.height` for window size
-- Modify `create_solar_system()` to add/remove bodies
-- Adjust `default_dt` for different time scales
-- Change colors in `body_colors` array
+- Change window size in `open_graph " 800x600"`
+- Modify `create_system()` to change masses and orbital parameters
+- Adjust initial `dt` (default 2.0) for different time scales
+- Change colors in `draw_body` calls
