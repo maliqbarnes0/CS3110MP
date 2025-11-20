@@ -78,6 +78,44 @@ Once the simulation window opens:
 - Make sure XQuartz is running (check Applications > Utilities > XQuartz)
 - Try logging out and back in after installing XQuartz
 
+### "Cannot open display" error
+
+If you see an error like:
+```
+Fatal error: exception Graphics.Graphic_failure("Cannot open display /private/tmp/com.apple.launchd.../org.xquartz:0")
+```
+
+This means your terminal cannot connect to the X11 display server. Follow these steps:
+
+1. **Start XQuartz**:
+   ```bash
+   open -a XQuartz
+   ```
+   Wait a few seconds until you see the XQuartz icon in your menu bar.
+
+2. **Allow local connections** (run this in your terminal):
+   ```bash
+   xhost + 127.0.0.1
+   ```
+
+3. **Set the DISPLAY environment variable**:
+   ```bash
+   export DISPLAY=:0
+   ```
+
+4. **Run the simulation again**:
+   ```bash
+   dune exec group90
+   ```
+
+**To make this permanent**, add the DISPLAY variable to your shell configuration:
+```bash
+echo 'export DISPLAY=:0' >> ~/.zshrc
+source ~/.zshrc
+```
+
+After this, you'll only need to start XQuartz before running the simulation (steps 1, 2, and 4).
+
 ### Simulation is too slow/fast
 
 - Use **Z** and **X** keys to adjust simulation speed
