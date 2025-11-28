@@ -35,3 +35,17 @@ val net_force_on : Body.b -> w -> Vec3.v
     Note: This uses explicit Euler method which may accumulate energy errors over time.
           For GUI: typical dt values range from 0.01 to 1000 depending on scale. *)
 val step : dt:float -> w -> w
+
+(** [check_collision b1 b2] checks if two bodies are colliding based on their positions and radii.
+    A collision occurs if the distance between the centers of the bodies is less than
+    or equal to the sum of their radii.
+    @param b1 The first body.
+    @param b2 The second body.
+    @return [true] if the bodies are colliding, [false] otherwise. *)
+val check_collision : Body.b -> Body.b -> bool
+
+(** [find_collisions world] returns a list of all pairs of bodies in [world] that are colliding.
+    Iterates through all unique pairs of bodies and checks for collisions using [check_collision].
+    @param world The collection of all bodies.
+    @return A list of tuples, each containing a pair of colliding bodies. *)
+val find_collisions : w -> (Body.b * Body.b) list
