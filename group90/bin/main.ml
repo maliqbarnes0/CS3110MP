@@ -27,6 +27,12 @@ let red = color 255 0 0 255
 let gray = color 80 80 80 255
 let dark_gray = color 40 40 40 255
 
+(* Trail configuration *)
+let max_trail_length = 120  (* Number of positions to keep in trail *)
+
+(* Trail type: list of Vec3 positions for each body *)
+type trails = Vec3.v list list
+
 let create_system () =
   (* Masses - more similar for chaotic interactions *)
   let g = 6.67e-11 in
@@ -37,8 +43,8 @@ let create_system () =
 
   (* Visual radii based on mass (cube root scaling for volume) *)
   let radius1 = 20. *. Float.pow (mass1 /. mass1) (1. /. 3.) in  (* 20 units *)
-  let radius2 = 20. *. Float.pow (mass2 /. mass1) (1. /. 3.) in  (* ~18 units *)
-  let radius3 = 20. *. Float.pow (mass3 /. mass1) (1. /. 3.) in  (* ~15.7 units *)
+  let radius2 = 20. *. Float.pow (mass2 /. mass1) (1. /. 3.) in (* ~18 units *)
+  let radius3 = 20. *. Float.pow (mass3 /. mass1) (1. /. 3.) in(* ~15.7 units *)
 
   let separation = 120. in
   (* Compact separation to keep everything visible *)
@@ -84,6 +90,33 @@ let draw_body body body_color =
   let radius = Body.radius body in
   let position = Vector3.create (Vec3.x pos) (Vec3.y pos) (Vec3.z pos) in
   draw_sphere position radius body_color
+
+(* Draw trail for a single body *)
+let draw_trail trail trail_color =
+  let rec draw_segments = function
+    | [] | [_] -> ()
+    | p1 :: p2 :: rest ->
+        let pos1 = Vector3.create (Vec3.x p1) (Vec3.y p1) (Vec3.z p1) in
+        let pos2 = Vector3.create (Vec3.x p2) (Vec3.y p2) (Vec3.z p2) in
+        (* Draw thicker lines by drawing small spheres at each position *)
+        draw_sphere pos1 1.5 trail_color;
+        draw_line_3d pos1 pos2 trail_color;
+        draw_segments (p2 :: rest)
+  in
+  draw_segments trail
+
+(* Update trails with new positions *)
+let update_trails trails world =
+  List.map2
+    (fun trail body ->
+      let pos = Body.pos body in
+      let new_trail = pos :: trail in
+      (* Keep only the last max_trail_length positions *)
+      if List.length new_trail > max_trail_length then
+        List.rev (List.tl (List.rev new_trail))
+      else
+        new_trail)
+    trails world
 
 (* Draw 3D axis indicators and grid planes at origin *)
 let draw_axes () =
@@ -202,9 +235,11 @@ let update_camera camera theta phi radius =
   let new_radius = Float.max 100. (Float.min 2000. (radius -. wheel *. 50.)) in
 
   (* Convert spherical to Cartesian *)
-  let new_x = x target +. new_radius *. Float.cos new_phi *. Float.cos new_theta in
+  let new_x = x target +. new_radius *. Float.cos new_phi *. Float.cos 
+  new_theta in
   let new_y = y target +. new_radius *. Float.sin new_phi in
-  let new_z = z target +. new_radius *. Float.cos new_phi *. Float.sin new_theta in
+  let new_z = z target +. new_radius *. Float.cos new_phi *. Float.sin 
+  new_theta in
 
   let new_camera = Camera3D.create
     (Vector3.create new_x new_y new_z)
@@ -215,12 +250,23 @@ let update_camera camera theta phi radius =
   in
   (new_camera, new_theta, new_phi, new_radius)
 
-let rec simulation_loop world dt paused camera theta phi radius =
+let rec simulation_loop world trails dt paused camera theta phi radius =
   (* Check for reset *)
-  let reset_world = if is_key_pressed Key.R then create_system () else world in
+  let reset_world, reset_trails =
+    if is_key_pressed Key.R then
+      (create_system (), [[];[];[]])  (* Reset trails to empty lists *)
+    else
+      (world, trails)
+  in
 
   (* Update physics only if not paused *)
   let new_world = if paused then reset_world else Engine.step ~dt reset_world in
+
+  (* Update trails with new positions (only if not paused) *)
+  let new_trails =
+    if paused then reset_trails
+    else update_trails reset_trails new_world
+  in
 
   (* Check for collisions in the NEW world state *)
   let collisions = Engine.find_collisions new_world in
@@ -252,6 +298,11 @@ let rec simulation_loop world dt paused camera theta phi radius =
     (* Draw axis indicators *)
     draw_axes ();
 
+    (* Draw trails first (behind bodies) *)
+    draw_trail (List.nth new_trails 0) (color 255 200 100 100);  (* Semi-transparent *)
+    draw_trail (List.nth new_trails 1) (color 100 150 255 100);
+    draw_trail (List.nth new_trails 2) (color 255 100 100 100);
+
     (* Draw the 3 bodies as spheres *)
     draw_body (List.nth new_world 0) (color 255 200 100 255);
     draw_body (List.nth new_world 1) (color 100 150 255 255);
@@ -265,7 +316,7 @@ let rec simulation_loop world dt paused camera theta phi radius =
     end_drawing ();
 
     Unix.sleepf 0.016;
-    simulation_loop new_world new_dt new_paused new_camera new_theta new_phi new_radius
+    simulation_loop new_world new_trails new_dt new_paused new_camera new_theta new_phi new_radius
   end
 
 let () =
@@ -286,7 +337,11 @@ let () =
   let initial_theta = Float.atan2 400. 400. in
   let initial_phi = Float.asin (300. /. initial_radius) in
 
-  simulation_loop (create_system ()) 0.5 false camera initial_theta initial_phi initial_radius;
+  (* Initial empty trails for 3 bodies *)
+  let initial_trails = [[];[];[]] in
+
+  simulation_loop (create_system ()) initial_trails 0.5 false camera 
+  initial_theta initial_phi initial_radius;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =
