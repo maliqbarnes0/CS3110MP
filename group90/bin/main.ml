@@ -33,6 +33,16 @@ let max_trail_length = 120  (* Number of positions to keep in trail *)
 (* Trail type: list of Vec3 positions for each body *)
 type trails = Vec3.v list list
 
+(* Collision animation type *)
+type collision_animation = {
+  position: Vec3.v;
+  start_time: float;
+  duration: float;
+  max_radius: float;
+}
+
+type collision_animations = collision_animation list
+
 let create_system () =
   (* Masses - more similar for chaotic interactions *)
   let g = 6.67e-11 in
@@ -108,14 +118,22 @@ let draw_trail trail trail_color =
   in
   draw_segments trail
 
-(* Update trails with new positions *)
+(* Update trails with new positions, return (new_trails, collision_positions) *)
 let update_trails trails world =
   (* If world size changed (collision occurred), rebuild trails *)
   if List.length trails <> List.length world then
+    (* Collision detected - calculate average position of all bodies for animation *)
+    let collision_pos =
+      if List.length world > 0 then
+        let sum_pos = List.fold_left (fun acc body -> Vec3.(acc + Body.pos body)) Vec3.zer0 world in
+        Vec3.((1. /. float_of_int (List.length world)) *~ sum_pos)
+      else
+        Vec3.zer0
+    in
     (* Create empty trails for current world *)
-    List.map (fun body -> [Body.pos body]) world
+    (List.map (fun body -> [Body.pos body]) world, Some collision_pos)
   else
-    List.map2
+    let new_trails = List.map2
       (fun trail body ->
         let pos = Body.pos body in
         let new_trail = pos :: trail in
@@ -125,6 +143,46 @@ let update_trails trails world =
         else
           new_trail)
       trails world
+    in
+    (new_trails, None)
+
+(* Draw collision animation as expanding shockwave *)
+let draw_collision_animation anim current_time =
+  let elapsed = current_time -. anim.start_time in
+  if elapsed < anim.duration then begin
+    let progress = elapsed /. anim.duration in
+    (* Fade out as animation progresses *)
+    let alpha = int_of_float (255. *. (1. -. progress)) in
+
+    (* Draw multiple expanding rings for shockwave effect *)
+    for i = 0 to 2 do
+      let offset = float_of_int i *. 0.15 in
+      let ring_progress = Float.max 0. (Float.min 1. (progress -. offset)) in
+      let ring_radius = anim.max_radius *. ring_progress in
+      let ring_alpha = int_of_float (float_of_int alpha *. (1. -. ring_progress)) in
+
+      if ring_alpha > 0 && ring_radius > 0. then begin
+        let pos = Vector3.create (Vec3.x anim.position) (Vec3.y anim.position) (Vec3.z anim.position) in
+        (* Draw expanding rings using transparent spheres *)
+        draw_sphere pos ring_radius (color 255 200 50 ring_alpha);
+        if ring_radius > 5. then
+          draw_sphere pos (ring_radius *. 0.8) (color 255 150 50 (ring_alpha / 2))
+      end
+    done;
+
+    (* Draw bright center flash that fades quickly *)
+    let flash_alpha = int_of_float (255. *. (1. -. (progress ** 0.3))) in
+    if flash_alpha > 0 then begin
+      let pos = Vector3.create (Vec3.x anim.position) (Vec3.y anim.position) (Vec3.z anim.position) in
+      draw_sphere pos (anim.max_radius *. 0.15) (color 255 255 200 flash_alpha)
+    end
+  end
+
+(* Update collision animations, removing expired ones *)
+let update_collision_animations anims current_time =
+  List.filter (fun anim ->
+    current_time -. anim.start_time < anim.duration
+  ) anims
 
 (* Draw 3D axis indicators and grid planes at origin *)
 let draw_axes () =
@@ -258,16 +316,16 @@ let update_camera camera theta phi radius =
   in
   (new_camera, new_theta, new_phi, new_radius)
 
-let rec simulation_loop world trails time_scale paused camera theta phi radius =
+let rec simulation_loop world trails time_scale paused camera theta phi radius collision_anims =
   (* Fixed physics timestep for accuracy *)
   let fixed_dt = 0.1 in
 
   (* Check for reset *)
-  let reset_world, reset_trails =
+  let reset_world, reset_trails, reset_anims =
     if is_key_pressed Key.R then
-      (create_system (), [[];[];[]])  (* Reset trails to empty lists *)
+      (create_system (), [[];[];[]], [])  (* Reset trails and animations *)
     else
-      (world, trails)
+      (world, trails, collision_anims)
   in
 
   (* Update physics only if not paused, using substeps for accuracy *)
@@ -286,10 +344,35 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius =
   in
 
   (* Update trails with new positions (only if not paused) *)
-  let new_trails =
-    if paused then reset_trails
+  let new_trails, collision_pos_opt =
+    if paused then (reset_trails, None)
     else update_trails reset_trails new_world
   in
+
+  (* Get current time for animations *)
+  let current_time = Unix.gettimeofday () in
+
+  (* Add new collision animation if a collision occurred *)
+  let updated_anims = match collision_pos_opt with
+    | Some pos ->
+        (* Calculate animation size based on merged body *)
+        let max_radius = if List.length new_world > 0 then
+          let merged_body = List.hd new_world in
+          Body.radius merged_body *. 3.0
+        else 50.0
+        in
+        let new_anim = {
+          position = pos;
+          start_time = current_time;
+          duration = 1.5;  (* Animation lasts 1.5 seconds *)
+          max_radius = max_radius;
+        } in
+        new_anim :: reset_anims
+    | None -> reset_anims
+  in
+
+  (* Update existing animations (remove expired ones) *)
+  let new_collision_anims = update_collision_animations updated_anims current_time in
 
   (* Check for collisions in the NEW world state *)
   let collisions = Engine.find_collisions new_world in
@@ -339,6 +422,9 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius =
     let body_colors = List.filteri (fun i _ -> i < List.length new_world) all_body_colors in
     List.iter2 draw_body new_world body_colors;
 
+    (* Draw collision animations *)
+    List.iter (fun anim -> draw_collision_animation anim current_time) new_collision_anims;
+
     end_mode_3d ();
 
     (* 2D UI overlay *)
@@ -347,7 +433,7 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius =
     end_drawing ();
 
     Unix.sleepf 0.016;
-    simulation_loop new_world new_trails new_time_scale new_paused new_camera new_theta new_phi new_radius
+    simulation_loop new_world new_trails new_time_scale new_paused new_camera new_theta new_phi new_radius new_collision_anims
   end
 
 let () =
@@ -371,9 +457,12 @@ let () =
   (* Initial empty trails for 3 bodies *)
   let initial_trails = [[];[];[]] in
 
+  (* Initial empty collision animations *)
+  let initial_collision_anims = [] in
+
   (* Start with 1.0x time scale (real-time) *)
   simulation_loop (create_system ()) initial_trails 1.0 false camera
-  initial_theta initial_phi initial_radius;
+  initial_theta initial_phi initial_radius initial_collision_anims;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =
