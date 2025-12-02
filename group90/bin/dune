@@ -1,4 +1,4 @@
 (executable
  (public_name group90)
  (name main)
- (libraries group90 graphics unix raylib))
+ (libraries group90 unix raylib))

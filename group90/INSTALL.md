@@ -1,44 +1,32 @@
-# 2-Body Gravity Simulation - Graphics Setup Guide
+# 3-Body Gravity Simulation - 3D Graphics Setup Guide
 
-This document provides instructions for installing dependencies and building the 2-Body Gravity Simulation project.
+This document provides instructions for installing dependencies and building the 3-Body Gravity Simulation project.
 
 ## Prerequisites and Installation
 
-To run the graphical visualization, you need the **OCaml Graphics library** and its system dependencies (X11).
+To run the 3D graphical visualization, you need the following libraries:
+- **Raylib** - Modern 3D game development library
+- **Unix** - System operations (typically included with OCaml)
 
 ### macOS Installation
 
-1. **Install XQuartz** (required for X11 support):
+**Install Raylib OCaml library**:
 
-   ```bash
-   brew install --cask xquartz
-   ```
+```bash
+opam install raylib
+```
 
-2. **Log out and log back in** (or restart your Mac) for XQuartz to work properly.
-
-3. **Install the OCaml Graphics library**:
-
-   ```bash
-   opam install graphics
-   ```
+Note: The `unix` library is typically included with your OCaml installation.
 
 ### Linux Installation
 
-1. **Install X11 development libraries**:
+**Install Raylib OCaml library**:
 
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install libx11-dev libxft-dev
+```bash
+opam install raylib
+```
 
-   # Fedora/RHEL
-   sudo dnf install libX11-devel libXft-devel
-   ```
-
-2. **Install the OCaml Graphics library**:
-
-   ```bash
-   opam install graphics
-   ```
+Note: The `unix` library is typically included with your OCaml installation.
 
 ## Quick Start (After Installation)
 
@@ -53,68 +41,35 @@ dune exec group90
 
 Once the simulation window opens:
 
+- **Left Click + Drag** - Rotate camera
+- **Mouse Wheel** - Zoom in/out
 - **P** - Pause/Resume the simulation
 - **Z** - Speed up time (1.5x, max 100x)
 - **X** - Slow down time (1.5x, min 0.1x)
+- **R** - Reset simulation
 - **Click EXIT button** - Quit the simulation
 
 ## Features
 
-- Real-time 2-body gravitational simulation
-- 2D visualization with orbital mechanics
-- Interactive speed controls
-- Two orbiting bodies with realistic physics
-- Live speed display
+- Real-time 3-body gravitational simulation
+- Full 3D visualization with orbital mechanics
+- Interactive 3D camera controls (rotate and zoom)
+- Three orbiting bodies with realistic physics
+- Orbital trails showing body paths
+- Interactive speed controls and pause/resume
+- 3D grid and axis indicators
+- Collision detection
 
 ## Troubleshooting
 
-### "Library graphics not found"
+### "Library raylib not found"
 
-- Make sure you've installed XQuartz and logged out/in
-- Run: `opam install graphics`
+Run: `opam install raylib`
 
-### Window doesn't open
+### Window doesn't open or crashes
 
-- Make sure XQuartz is running (check Applications > Utilities > XQuartz)
-- Try logging out and back in after installing XQuartz
-
-### "Cannot open display" error
-
-If you see an error like:
-```
-Fatal error: exception Graphics.Graphic_failure("Cannot open display /private/tmp/com.apple.launchd.../org.xquartz:0")
-```
-
-This means your terminal cannot connect to the X11 display server. Follow these steps:
-
-1. **Start XQuartz**:
-   ```bash
-   open -a XQuartz
-   ```
-   Wait a few seconds until you see the XQuartz icon in your menu bar.
-
-2. **Allow local connections** (run this in your terminal):
-   ```bash
-   xhost + 127.0.0.1
-   ```
-
-3. **Set the DISPLAY environment variable**:
-   ```bash
-   export DISPLAY=:0
-   ```
-
-4. **Run the simulation again**:
-   ```bash
-   dune exec group90
-   ```
-
-**To make this permanent**, add the DISPLAY variable to your shell configuration:
-```bash
-echo 'export DISPLAY=:0' >> ~/.zshrc
-source ~/.zshrc
-```
-
-After this, you'll only need to start XQuartz before running the simulation (steps 1, 2, and 4).
+- Make sure raylib is properly installed
+- Try rebuilding: `dune clean && dune build`
 
 ### Simulation is too slow/fast
 
@@ -125,7 +80,9 @@ After this, you'll only need to start XQuartz before running the simulation (ste
 
 You can modify the simulation by editing [bin/main.ml](bin/main.ml):
 
-- Change window size in `open_graph " 800x600"`
-- Modify `create_system()` to change masses and orbital parameters
-- Adjust initial `dt` (default 2.0) for different time scales
-- Change colors in `draw_body` calls
+- Change window size in `init_window 800 600`
+- Modify `create_system()` to change masses, positions, and orbital parameters
+- Adjust initial `dt` (default 0.5) for different time scales
+- Change body colors in the `draw_body` calls
+- Modify camera position and field of view
+- Adjust trail length by changing `max_trail_length`
