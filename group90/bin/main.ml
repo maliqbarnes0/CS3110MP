@@ -28,19 +28,20 @@ let gray = color 80 80 80 255
 let dark_gray = color 40 40 40 255
 
 let create_system () =
-  (* Masses *)
+  (* Masses - more similar for chaotic interactions *)
   let g = 6.67e-11 in
-  let mass1 = 1000. *. (1. /. g) in
-  let mass2 = 100. *. (1. /. g) in
-  let mass3 = 200. *. (1. /. g) in
+  (* Increased masses significantly to keep velocities lower *)
+  let mass1 = 8000. *. (1. /. g) in   (* Heavy star *)
+  let mass2 = 6000. *. (1. /. g) in   (* Medium companion *)
+  let mass3 = 4000. *. (1. /. g) in   (* Smaller interloper *)
 
   (* Visual radii based on mass (cube root scaling for volume) *)
   let radius1 = 15. *. Float.pow (mass1 /. mass1) (1. /. 3.) in  (* 15 units *)
-  let radius2 = 15. *. Float.pow (mass2 /. mass1) (1. /. 3.) in  (* ~7 units *)
-  let radius3 = 15. *. Float.pow (mass3 /. mass1) (1. /. 3.) in  (* ~9 units *)
+  let radius2 = 15. *. Float.pow (mass2 /. mass1) (1. /. 3.) in  (* ~13.5 units *)
+  let radius3 = 15. *. Float.pow (mass3 /. mass1) (1. /. 3.) in  (* ~11.8 units *)
 
-  let separation = 300. in
-  (* pixels *)
+  let separation = 180. in
+  (* Reduced separation to keep orbit tighter *)
 
   (* Center of mass at origin *)
   let com_x = 0. in
@@ -57,24 +58,23 @@ let create_system () =
   let v1 = v_rel *. mass2 /. total_mass in
   let v2 = v_rel *. mass1 /. total_mass in
 
-  (* Large mass - closer to center *)
-  (* Bodies orbit in XY plane (vertical when viewed from default camera angle) *)
+  (* Body 1 - Heavy star orbiting in YZ plane *)
   let body1 =
     Body.make ~mass:mass1
-      ~pos:(Vec3.make (com_x -. r1) com_y com_z)
-      ~vel:(Vec3.make 0. v1 0.) ~radius:radius1
+      ~pos:(Vec3.make com_x (com_y -. r1) com_z)
+      ~vel:(Vec3.make 0. 0. v1) ~radius:radius1
   in
-  (* Smaller mass - farther from center *)
+  (* Body 2 - Medium companion orbiting opposite direction *)
   let body2 =
     Body.make ~mass:mass2
-      ~pos:(Vec3.make (com_x +. r2) com_y com_z)
-      ~vel:(Vec3.make 0. (-.v2) 0.) ~radius:radius2
+      ~pos:(Vec3.make com_x (com_y +. r2) com_z)
+      ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:radius2
   in
-  (* Third body on collision course with body2 *)
+  (* Body 3 - Interloper approaching at an angle with slower velocity *)
   let body3 =
     Body.make ~mass:mass3
-      ~pos:(Vec3.make (com_x +. r2 +. 150.) com_y com_z) (* start to the right *)
-      ~vel:(Vec3.make (-2.) 0. 0.) (* moving left toward body2 *)
+      ~pos:(Vec3.make 250. 80. 150.) (* Closer starting position *)
+      ~vel:(Vec3.make (-1.2) (-0.5) (-0.8)) (* Much slower approach *)
       ~radius:radius3
   in
   [ body1; body2; body3 ]
@@ -85,19 +85,40 @@ let draw_body body body_color =
   let position = Vector3.create (Vec3.x pos) (Vec3.y pos) (Vec3.z pos) in
   draw_sphere position radius body_color
 
-(* Draw a 3D grid on the XZ plane *)
-let draw_grid slices spacing =
+(* Draw 3D grids on all three planes *)
+let draw_grids slices spacing =
   let half_size = float_of_int slices *. spacing /. 2. in
+  let grid_color = color 60 60 60 255 in
+
   for i = 0 to slices do
     let offset = (float_of_int i *. spacing) -. half_size in
-    (* Lines parallel to X axis *)
+
+    (* XZ plane (horizontal ground - Y=0) *)
     let start_x = Vector3.create (-.half_size) 0. offset in
     let end_x = Vector3.create half_size 0. offset in
-    draw_line_3d start_x end_x dark_gray;
-    (* Lines parallel to Z axis *)
+    draw_line_3d start_x end_x grid_color;
+
     let start_z = Vector3.create offset 0. (-.half_size) in
     let end_z = Vector3.create offset 0. half_size in
-    draw_line_3d start_z end_z dark_gray
+    draw_line_3d start_z end_z grid_color;
+
+    (* XY plane (vertical wall - Z=0) *)
+    let start_xy_x = Vector3.create (-.half_size) offset 0. in
+    let end_xy_x = Vector3.create half_size offset 0. in
+    draw_line_3d start_xy_x end_xy_x (color 40 40 50 255);
+
+    let start_xy_y = Vector3.create offset (-.half_size) 0. in
+    let end_xy_y = Vector3.create offset half_size 0. in
+    draw_line_3d start_xy_y end_xy_y (color 40 40 50 255);
+
+    (* YZ plane (vertical wall - X=0) *)
+    let start_yz_y = Vector3.create 0. (-.half_size) offset in
+    let end_yz_y = Vector3.create 0. half_size offset in
+    draw_line_3d start_yz_y end_yz_y (color 50 40 40 255);
+
+    let start_yz_z = Vector3.create 0. offset (-.half_size) in
+    let end_yz_z = Vector3.create 0. offset half_size in
+    draw_line_3d start_yz_z end_yz_z (color 50 40 40 255)
   done
 
 (* Draw 2D UI overlay *)
@@ -162,7 +183,7 @@ let update_camera camera theta phi radius =
     (Vector3.create new_x new_y new_z)
     target
     (Vector3.create 0. 1. 0.)
-    45.
+    60.
     CameraProjection.Perspective
   in
   (new_camera, new_theta, new_phi, new_radius)
@@ -201,8 +222,8 @@ let rec simulation_loop world dt paused camera theta phi radius =
     (* 3D rendering *)
     begin_mode_3d new_camera;
 
-    (* Draw grid *)
-    draw_grid 40 50.;
+    (* Draw grids on all three planes *)
+    draw_grids 20 50.;
 
     (* Draw the 3 bodies as spheres *)
     draw_body (List.nth new_world 0) (color 255 200 100 255);
@@ -224,12 +245,12 @@ let () =
   init_window 800 600 "3D Gravity Simulation";
   set_target_fps 60;
 
-  (* Setup 3D camera *)
+  (* Setup 3D camera with wider FOV to see more *)
   let camera = Camera3D.create
     (Vector3.create 600. 400. 600.)  (* position: looking from an angle *)
     (Vector3.create 0. 0. 0.)        (* target: origin *)
     (Vector3.create 0. 1. 0.)        (* up vector *)
-    45.                               (* fov *)
+    60.                               (* fov - increased from 45 to see more *)
     CameraProjection.Perspective
   in
 
