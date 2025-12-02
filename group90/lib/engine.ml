@@ -43,7 +43,8 @@ let step ~dt world =
     (fun b ->
       let f = net_force_on b world in
       let a = Vec3.(1. /. Body.mass b *~ f) in
-      let new_vel = Vec3.(Body.vel b + (dt *~ a)) in
-      let new_pos = Vec3.(Body.pos b + (dt *~ new_vel)) in
+      let old_vel = Body.vel b in
+      let new_vel = Vec3.(old_vel + (dt *~ a)) in
+      let new_pos = Vec3.(Body.pos b + (dt *~ old_vel)) in
       Body.(b |> with_vel new_vel |> with_pos new_pos))
     world
