@@ -65,20 +65,23 @@ let create_system () =
   let v2 = v_rel *. mass1 /. total_mass in
 
   (* Body 1 - Heavy star orbiting in YZ plane *)
+  let density1 = mass1 /. ((4.0 /. 3.0) *. Float.pi *. radius1 ** 3.0) in
   let body1 =
-    Body.make ~mass:mass1
+    Body.make ~density:density1
       ~pos:(Vec3.make com_x (com_y -. r1) com_z)
       ~vel:(Vec3.make 0. 0. v1) ~radius:radius1
   in
   (* Body 2 - Medium companion orbiting opposite direction *)
+  let density2 = mass2 /. ((4.0 /. 3.0) *. Float.pi *. radius2 ** 3.0) in
   let body2 =
-    Body.make ~mass:mass2
+    Body.make ~density:density2
       ~pos:(Vec3.make com_x (com_y +. r2) com_z)
       ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:radius2
   in
   (* Body 3 - Interloper approaching at an angle with slower velocity *)
+  let density3 = mass3 /. ((4.0 /. 3.0) *. Float.pi *. radius3 ** 3.0) in
   let body3 =
-    Body.make ~mass:mass3
+    Body.make ~density:density3
       ~pos:(Vec3.make 180. 60. 100.) (* Even closer to keep in view *)
       ~vel:(Vec3.make (-1.0) (-0.4) (-0.6)) (* Slower to stay visible *)
       ~radius:radius3
