@@ -110,16 +110,21 @@ let draw_trail trail trail_color =
 
 (* Update trails with new positions *)
 let update_trails trails world =
-  List.map2
-    (fun trail body ->
-      let pos = Body.pos body in
-      let new_trail = pos :: trail in
-      (* Keep only the last max_trail_length positions *)
-      if List.length new_trail > max_trail_length then
-        List.rev (List.tl (List.rev new_trail))
-      else
-        new_trail)
-    trails world
+  (* If world size changed (collision occurred), rebuild trails *)
+  if List.length trails <> List.length world then
+    (* Create empty trails for current world *)
+    List.map (fun body -> [Body.pos body]) world
+  else
+    List.map2
+      (fun trail body ->
+        let pos = Body.pos body in
+        let new_trail = pos :: trail in
+        (* Keep only the last max_trail_length positions *)
+        if List.length new_trail > max_trail_length then
+          List.rev (List.tl (List.rev new_trail))
+        else
+          new_trail)
+      trails world
 
 (* Draw 3D axis indicators and grid planes at origin *)
 let draw_axes () =
@@ -317,14 +322,22 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius =
     draw_axes ();
 
     (* Draw trails first (behind bodies) *)
-    draw_trail (List.nth new_trails 0) (color 255 200 100 100);  (* Semi-transparent *)
-    draw_trail (List.nth new_trails 1) (color 100 150 255 100);
-    draw_trail (List.nth new_trails 2) (color 255 100 100 100);
+    let all_trail_colors = [
+      color 255 200 100 100;
+      color 100 150 255 100;
+      color 255 100 100 100;
+    ] in
+    let trail_colors = List.filteri (fun i _ -> i < List.length new_trails) all_trail_colors in
+    List.iter2 draw_trail new_trails trail_colors;
 
-    (* Draw the 3 bodies as spheres *)
-    draw_body (List.nth new_world 0) (color 255 200 100 255);
-    draw_body (List.nth new_world 1) (color 100 150 255 255);
-    draw_body (List.nth new_world 2) (color 255 100 100 255);
+    (* Draw the bodies as spheres *)
+    let all_body_colors = [
+      color 255 200 100 255;
+      color 100 150 255 255;
+      color 255 100 100 255;
+    ] in
+    let body_colors = List.filteri (fun i _ -> i < List.length new_world) all_body_colors in
+    List.iter2 draw_body new_world body_colors;
 
     end_mode_3d ();
 
