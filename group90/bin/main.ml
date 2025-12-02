@@ -185,7 +185,7 @@ let draw_axes () =
   done
 
 (* Draw 2D UI overlay *)
-let draw_ui is_colliding dt paused =
+let draw_ui is_colliding time_scale paused =
   (* Draw exit button *)
   draw_rectangle 10 560 80 30 gray;
   draw_text "EXIT" 25 570 20 white;
@@ -197,7 +197,7 @@ let draw_ui is_colliding dt paused =
   end;
 
   (* Draw speed info *)
-  draw_text (Printf.sprintf "Speed: %.1fx" dt) 650 570 20 white;
+  draw_text (Printf.sprintf "Speed: %.1fx" time_scale) 650 570 20 white;
   draw_text "Z: faster | X: slower" 630 550 15 white;
   draw_text (if paused then "P: unpause" else "P: pause") 630 530 15 white;
   draw_text "R: reset simulation" 630 510 15 white;
@@ -253,7 +253,10 @@ let update_camera camera theta phi radius =
   in
   (new_camera, new_theta, new_phi, new_radius)
 
-let rec simulation_loop world trails dt paused camera theta phi radius =
+let rec simulation_loop world trails time_scale paused camera theta phi radius =
+  (* Fixed physics timestep for accuracy *)
+  let fixed_dt = 0.1 in
+
   (* Check for reset *)
   let reset_world, reset_trails =
     if is_key_pressed Key.R then
@@ -262,8 +265,20 @@ let rec simulation_loop world trails dt paused camera theta phi radius =
       (world, trails)
   in
 
-  (* Update physics only if not paused *)
-  let new_world = if paused then reset_world else Engine.step ~dt reset_world in
+  (* Update physics only if not paused, using substeps for accuracy *)
+  let new_world =
+    if paused then reset_world
+    else begin
+      (* Run multiple substeps based on time_scale to maintain accuracy *)
+      let num_steps = max 1 (int_of_float (Float.ceil time_scale)) in
+      let substep_dt = (time_scale *. fixed_dt) /. float_of_int num_steps in
+      let rec do_steps w n =
+        if n = 0 then w
+        else do_steps (Engine.step ~dt:substep_dt w) (n - 1)
+      in
+      do_steps reset_world num_steps
+    end
+  in
 
   (* Update trails with new positions (only if not paused) *)
   let new_trails =
@@ -280,11 +295,11 @@ let rec simulation_loop world trails dt paused camera theta phi radius =
     update_camera camera theta phi radius in
 
   (* Check for key presses to adjust simulation speed *)
-  let new_dt, new_paused =
-    if is_key_pressed Key.Z then (min (dt *. 1.5) 100.0, paused)
-    else if is_key_pressed Key.X then (max (dt /. 1.5) 0.1, paused)
-    else if is_key_pressed Key.P then (dt, not paused)
-    else (dt, paused)
+  let new_time_scale, new_paused =
+    if is_key_pressed Key.Z then (min (time_scale *. 1.5) 20.0, paused)
+    else if is_key_pressed Key.X then (max (time_scale /. 1.5) 0.1, paused)
+    else if is_key_pressed Key.P then (time_scale, not paused)
+    else (time_scale, paused)
   in
 
   let should_exit = check_exit_button () || window_should_close () in
@@ -314,12 +329,12 @@ let rec simulation_loop world trails dt paused camera theta phi radius =
     end_mode_3d ();
 
     (* 2D UI overlay *)
-    draw_ui is_colliding new_dt new_paused;
+    draw_ui is_colliding new_time_scale new_paused;
 
     end_drawing ();
 
     Unix.sleepf 0.016;
-    simulation_loop new_world new_trails new_dt new_paused new_camera new_theta new_phi new_radius
+    simulation_loop new_world new_trails new_time_scale new_paused new_camera new_theta new_phi new_radius
   end
 
 let () =
@@ -343,7 +358,8 @@ let () =
   (* Initial empty trails for 3 bodies *)
   let initial_trails = [[];[];[]] in
 
-  simulation_loop (create_system ()) initial_trails 0.5 false camera 
+  (* Start with 1.0x time scale (real-time) *)
+  simulation_loop (create_system ()) initial_trails 1.0 false camera
   initial_theta initial_phi initial_radius;
 
   (* Exit screen - keep drawing until user presses a key *)
