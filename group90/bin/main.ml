@@ -85,40 +85,67 @@ let draw_body body body_color =
   let position = Vector3.create (Vec3.x pos) (Vec3.y pos) (Vec3.z pos) in
   draw_sphere position radius body_color
 
-(* Draw 3D grids on all three planes *)
-let draw_grids slices spacing =
-  let half_size = float_of_int slices *. spacing /. 2. in
-  let grid_color = color 60 60 60 255 in
+(* Draw 3D axis indicators and grid planes at origin *)
+let draw_axes () =
+  let axis_length = 150. in
+  let grid_size = 400. in
+  let grid_spacing = 50. in
+  let grid_color = color 40 40 40 255 in
 
-  for i = 0 to slices do
-    let offset = (float_of_int i *. spacing) -. half_size in
+  (* Main axis lines - brighter *)
+  (* X axis - Red *)
+  let x_start = Vector3.create (-.axis_length) 0. 0. in
+  let x_end = Vector3.create axis_length 0. 0. in
+  draw_line_3d x_start x_end (color 255 80 80 255);
 
-    (* XZ plane (horizontal ground - Y=0) *)
-    let start_x = Vector3.create (-.half_size) 0. offset in
-    let end_x = Vector3.create half_size 0. offset in
-    draw_line_3d start_x end_x grid_color;
+  (* Y axis - Green *)
+  let y_start = Vector3.create 0. (-.axis_length) 0. in
+  let y_end = Vector3.create 0. axis_length 0. in
+  draw_line_3d y_start y_end (color 80 255 80 255);
 
-    let start_z = Vector3.create offset 0. (-.half_size) in
-    let end_z = Vector3.create offset 0. half_size in
+  (* Z axis - Blue *)
+  let z_start = Vector3.create 0. 0. (-.axis_length) in
+  let z_end = Vector3.create 0. 0. axis_length in
+  draw_line_3d z_start z_end (color 80 80 255 255);
+
+  (* Grid lines on YZ plane (X = 0) *)
+  let num_lines = int_of_float (grid_size /. grid_spacing) in
+  for i = -num_lines to num_lines do
+    let offset = float_of_int i *. grid_spacing in
+    (* Horizontal lines (parallel to Z) *)
+    let start_z = Vector3.create 0. offset (-.grid_size /. 2.) in
+    let end_z = Vector3.create 0. offset (grid_size /. 2.) in
     draw_line_3d start_z end_z grid_color;
+    (* Vertical lines (parallel to Y) *)
+    let start_y = Vector3.create 0. (-.grid_size /. 2.) offset in
+    let end_y = Vector3.create 0. (grid_size /. 2.) offset in
+    draw_line_3d start_y end_y grid_color
+  done;
 
-    (* XY plane (vertical wall - Z=0) *)
-    let start_xy_x = Vector3.create (-.half_size) offset 0. in
-    let end_xy_x = Vector3.create half_size offset 0. in
-    draw_line_3d start_xy_x end_xy_x (color 40 40 50 255);
+  (* Grid lines on XZ plane (Y = 0) *)
+  for i = -num_lines to num_lines do
+    let offset = float_of_int i *. grid_spacing in
+    (* Lines parallel to X *)
+    let start_x = Vector3.create (-.grid_size /. 2.) 0. offset in
+    let end_x = Vector3.create (grid_size /. 2.) 0. offset in
+    draw_line_3d start_x end_x grid_color;
+    (* Lines parallel to Z *)
+    let start_z = Vector3.create offset 0. (-.grid_size /. 2.) in
+    let end_z = Vector3.create offset 0. (grid_size /. 2.) in
+    draw_line_3d start_z end_z grid_color
+  done;
 
-    let start_xy_y = Vector3.create offset (-.half_size) 0. in
-    let end_xy_y = Vector3.create offset half_size 0. in
-    draw_line_3d start_xy_y end_xy_y (color 40 40 50 255);
-
-    (* YZ plane (vertical wall - X=0) *)
-    let start_yz_y = Vector3.create 0. (-.half_size) offset in
-    let end_yz_y = Vector3.create 0. half_size offset in
-    draw_line_3d start_yz_y end_yz_y (color 50 40 40 255);
-
-    let start_yz_z = Vector3.create 0. offset (-.half_size) in
-    let end_yz_z = Vector3.create 0. offset half_size in
-    draw_line_3d start_yz_z end_yz_z (color 50 40 40 255)
+  (* Grid lines on XY plane (Z = 0) *)
+  for i = -num_lines to num_lines do
+    let offset = float_of_int i *. grid_spacing in
+    (* Lines parallel to X *)
+    let start_x = Vector3.create (-.grid_size /. 2.) offset 0. in
+    let end_x = Vector3.create (grid_size /. 2.) offset 0. in
+    draw_line_3d start_x end_x grid_color;
+    (* Lines parallel to Y *)
+    let start_y = Vector3.create offset (-.grid_size /. 2.) 0. in
+    let end_y = Vector3.create offset (grid_size /. 2.) 0. in
+    draw_line_3d start_y end_y grid_color
   done
 
 (* Draw 2D UI overlay *)
@@ -222,8 +249,8 @@ let rec simulation_loop world dt paused camera theta phi radius =
     (* 3D rendering *)
     begin_mode_3d new_camera;
 
-    (* Draw grids on all three planes *)
-    draw_grids 16 40.;
+    (* Draw axis indicators *)
+    draw_axes ();
 
     (* Draw the 3 bodies as spheres *)
     draw_body (List.nth new_world 0) (color 255 200 100 255);
@@ -259,7 +286,7 @@ let () =
   let initial_theta = Float.atan2 400. 400. in
   let initial_phi = Float.asin (300. /. initial_radius) in
 
-  simulation_loop (create_system ()) 2.0 false camera initial_theta initial_phi initial_radius;
+  simulation_loop (create_system ()) 0.5 false camera initial_theta initial_phi initial_radius;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =
