@@ -36,12 +36,12 @@ let create_system () =
   let mass3 = 4000. *. (1. /. g) in   (* Smaller interloper *)
 
   (* Visual radii based on mass (cube root scaling for volume) *)
-  let radius1 = 15. *. Float.pow (mass1 /. mass1) (1. /. 3.) in  (* 15 units *)
-  let radius2 = 15. *. Float.pow (mass2 /. mass1) (1. /. 3.) in  (* ~13.5 units *)
-  let radius3 = 15. *. Float.pow (mass3 /. mass1) (1. /. 3.) in  (* ~11.8 units *)
+  let radius1 = 20. *. Float.pow (mass1 /. mass1) (1. /. 3.) in  (* 20 units *)
+  let radius2 = 20. *. Float.pow (mass2 /. mass1) (1. /. 3.) in  (* ~18 units *)
+  let radius3 = 20. *. Float.pow (mass3 /. mass1) (1. /. 3.) in  (* ~15.7 units *)
 
-  let separation = 180. in
-  (* Reduced separation to keep orbit tighter *)
+  let separation = 120. in
+  (* Compact separation to keep everything visible *)
 
   (* Center of mass at origin *)
   let com_x = 0. in
@@ -73,8 +73,8 @@ let create_system () =
   (* Body 3 - Interloper approaching at an angle with slower velocity *)
   let body3 =
     Body.make ~mass:mass3
-      ~pos:(Vec3.make 250. 80. 150.) (* Closer starting position *)
-      ~vel:(Vec3.make (-1.2) (-0.5) (-0.8)) (* Much slower approach *)
+      ~pos:(Vec3.make 180. 60. 100.) (* Even closer to keep in view *)
+      ~vel:(Vec3.make (-1.0) (-0.4) (-0.6)) (* Slower to stay visible *)
       ~radius:radius3
   in
   [ body1; body2; body3 ]
@@ -183,7 +183,7 @@ let update_camera camera theta phi radius =
     (Vector3.create new_x new_y new_z)
     target
     (Vector3.create 0. 1. 0.)
-    60.
+    70.
     CameraProjection.Perspective
   in
   (new_camera, new_theta, new_phi, new_radius)
@@ -223,7 +223,7 @@ let rec simulation_loop world dt paused camera theta phi radius =
     begin_mode_3d new_camera;
 
     (* Draw grids on all three planes *)
-    draw_grids 20 50.;
+    draw_grids 16 40.;
 
     (* Draw the 3 bodies as spheres *)
     draw_body (List.nth new_world 0) (color 255 200 100 255);
@@ -245,19 +245,19 @@ let () =
   init_window 800 600 "3D Gravity Simulation";
   set_target_fps 60;
 
-  (* Setup 3D camera with wider FOV to see more *)
+  (* Setup 3D camera closer to action *)
   let camera = Camera3D.create
-    (Vector3.create 600. 400. 600.)  (* position: looking from an angle *)
+    (Vector3.create 400. 300. 400.)  (* position: closer view *)
     (Vector3.create 0. 0. 0.)        (* target: origin *)
     (Vector3.create 0. 1. 0.)        (* up vector *)
-    60.                               (* fov - increased from 45 to see more *)
+    70.                               (* fov - wider to see more *)
     CameraProjection.Perspective
   in
 
   (* Initial spherical coordinates for camera *)
-  let initial_radius = Float.sqrt (600. *. 600. +. 400. *. 400. +. 600. *. 600.) in
-  let initial_theta = Float.atan2 600. 600. in
-  let initial_phi = Float.asin (400. /. initial_radius) in
+  let initial_radius = Float.sqrt (400. *. 400. +. 300. *. 300. +. 400. *. 400.) in
+  let initial_theta = Float.atan2 400. 400. in
+  let initial_phi = Float.asin (300. /. initial_radius) in
 
   simulation_loop (create_system ()) 2.0 false camera initial_theta initial_phi initial_radius;
 
