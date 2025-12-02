@@ -4,10 +4,11 @@
 type b
 (** The type representing a celestial body (planet, star, asteroid, etc.). *)
 
-val make : mass:float -> pos:Vec3.v -> vel:Vec3.v -> radius:float -> b
-(** [make ~mass ~pos ~vel ~radius] creates a new body with the specified mass
-    (in kilograms), position (as a 3D vector in meters), velocity (as a 3D
-    vector in meters per second), and radius (in meters). *)
+val make : density:float -> pos:Vec3.v -> vel:Vec3.v -> radius:float -> b
+(** [make ~density ~pos ~vel ~radius] creates a new body with the specified
+    density (in kg/m³), position (as a 3D vector in meters), velocity (as a 3D
+    vector in meters per second), and radius (in meters). Mass is automatically
+    calculated from density and radius using the sphere volume formula. *)
 
 val mass : b -> float
 (** [mass b] returns the mass of body [b] in kilograms. *)
@@ -21,6 +22,9 @@ val vel : b -> Vec3.v
 
 val radius : b -> float
 (** [radius b] returns the radius of body [b] in meters. *)
+
+val density : b -> float
+(** [density b] returns the density of body [b] in kilograms per cubic meter. *)
 
 val with_pos : Vec3.v -> b -> b
 (** [with_pos p b] returns a new body identical to [b] but with position [p].
