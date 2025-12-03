@@ -438,7 +438,7 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
 
   List.iteri (fun i (name, col) ->
     let (density, radius) = List.nth planet_params i in
-    let base_y = 75 + i * 160 in
+    let base_y = 55 + i * 145 in
     let is_merged = i >= num_alive_planets in
 
     (* Planet section header *)
@@ -455,14 +455,21 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
 
     (* Separator *)
     if i < 2 then
-      draw_line (sidebar_x + 10) (base_y + 145) (sidebar_x + sidebar_width - 10) (base_y + 145) (color 50 60 80 255)
+      draw_line (sidebar_x + 10) (base_y + 130) (sidebar_x + sidebar_width - 10) (base_y + 130) (color 50 60 80 255)
   ) planet_colors;
 
   (* Bottom controls *)
-  draw_text (Printf.sprintf "Speed: %.1fx" time_scale) (sidebar_x + 15) 515 12 white;
+  draw_text (Printf.sprintf "Speed: %.1fx" time_scale) (sidebar_x + 15) 500 12 white;
+  draw_text "[Z] Faster  [X] Slower" (sidebar_x + 15) 518 10 (color 180 180 200 255);
   draw_text (if paused then "[P] Resume" else "[P] Pause") (sidebar_x + 15) 535 11 (color 180 180 200 255);
-  draw_text "[A] Apply changes" (sidebar_x + 15) 553 11 (color 180 180 200 255);
-  draw_text "[R] Reset to default" (sidebar_x + 15) 571 11 (color 180 180 200 255);
+  draw_line (sidebar_x + 10) 550 (sidebar_x + sidebar_width - 10) 550 (color 50 60 80 255);
+  draw_text "[A] Apply changes" (sidebar_x + 15) 558 11 (color 180 180 200 255);
+  draw_text "[R] Reset to default" (sidebar_x + 15) 576 11 (color 180 180 200 255);
+
+  (* Camera controls - bottom left *)
+  draw_text "CAMERA" 15 510 11 (color 150 180 255 255);
+  draw_text "Rotate: Drag" 15 528 10 (color 180 180 200 255);
+  draw_text "Zoom: Wheel" 15 543 10 (color 180 180 200 255);
 
   (* Exit button - moved to left *)
   draw_rectangle 10 560 80 30 (color 180 50 50 255);
@@ -488,9 +495,13 @@ let update_camera camera theta phi radius =
   let open Vector3 in
   let target = Camera3D.target camera in
 
-  (* Mouse drag to rotate *)
+  (* Check if mouse is over sidebar (right side at x >= 600) *)
+  let mouse_x = get_mouse_x () in
+  let mouse_over_sidebar = mouse_x >= 600 in
+
+  (* Mouse drag to rotate - only if not over sidebar *)
   let new_theta, new_phi =
-    if is_mouse_button_down MouseButton.Left then
+    if is_mouse_button_down MouseButton.Left && not mouse_over_sidebar then
       let delta = get_mouse_delta () in
       let sensitivity = 0.003 in
       let theta_change = theta -. (Vector2.x delta *. sensitivity) in
@@ -501,8 +512,8 @@ let update_camera camera theta phi radius =
     else (theta, phi)
   in
 
-  (* Zoom with mouse wheel - allow very close and very far zoom *)
-  let wheel = get_mouse_wheel_move () in
+  (* Zoom with mouse wheel - only if not over sidebar *)
+  let wheel = if not mouse_over_sidebar then get_mouse_wheel_move () else 0. in
   let new_radius =
     Float.max 10. (Float.min 50000. (radius -. (wheel *. 100.)))
   in
@@ -533,7 +544,7 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
   let new_pending_params =
     let params = ref pending_params in
     for i = 0 to 2 do
-      let base_y = 75 + i * 160 in
+      let base_y = 75 + i * 145 in
 
       (* Check density slider with centered ranges *)
       (match check_slider_drag (sidebar_x + 50) (base_y + 60) 130 1e10 6e10 with
@@ -566,23 +577,13 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
       let reset_params = [(d1, r1); (d2, r2); (d3, r3)] in
       (custom_sys, [ []; []; [] ], [], reset_params, reset_params)
     else if is_key_pressed Key.R then
-      (* Reset to original defaults completely *)
-      let g = 6.67e-11 in
-      let default_radius1 = 20. in
-      let default_radius2 = 18. in
-      let default_radius3 = 16. in
-      let original_mass1 = 8000. /. g in
-      let original_mass2 = 6000. /. g in
-      let original_mass3 = 4000. /. g in
-      let volume1 = (4.0 /. 3.0) *. Float.pi *. (default_radius1 ** 3.0) in
-      let volume2 = (4.0 /. 3.0) *. Float.pi *. (default_radius2 ** 3.0) in
-      let volume3 = (4.0 /. 3.0) *. Float.pi *. (default_radius3 ** 3.0) in
-      let default_density1 = original_mass1 /. volume1 in
-      let default_density2 = original_mass2 /. volume2 in
-      let default_density3 = original_mass3 /. volume3 in
-
+      (* Reset to original defaults - use exact same hardcoded values as initial_params *)
+      let default_params = [
+        (3.5747e10, 20.);  (* Planet 1: density, radius *)
+        (2.6810e10, 18.);  (* Planet 2: density, radius *)
+        (1.7873e10, 16.);  (* Planet 3: density, radius *)
+      ] in
       let default_sys = create_system () in
-      let default_params = [(default_density1, default_radius1); (default_density2, default_radius2); (default_density3, default_radius3)] in
       (default_sys, [ []; []; [] ], [], default_params, default_params)
     else (world, trails, collision_anims, new_pending_params, applied_params)
   in
