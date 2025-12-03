@@ -118,24 +118,42 @@ type collision_animation = {
 
 type collision_animations = collision_animation list
 
-let create_system () =
-  (* Masses - more similar for chaotic interactions *)
+let create_system ?(custom_params = None) () =
   let g = 6.67e-11 in
-  (* Increased masses significantly to keep velocities lower *)
-  let mass1 = 8000. *. (1. /. g) in
-  (* Heavy star *)
-  let mass2 = 6000. *. (1. /. g) in
-  (* Medium companion *)
-  let mass3 = 4000. *. (1. /. g) in
-  (* Smaller interloper *)
 
-  (* Visual radii based on mass (cube root scaling for volume) *)
-  let radius1 = 20. *. Float.pow (mass1 /. mass1) (1. /. 3.) in
-  (* 20 units *)
-  let radius2 = 20. *. Float.pow (mass2 /. mass1) (1. /. 3.) in
-  (* ~18 units *)
-  let radius3 = 20. *. Float.pow (mass3 /. mass1) (1. /. 3.) in
-  (* ~15.7 units *)
+  (* Default parameters - densities calculated to match original masses *)
+  (* Original: mass1 = 8000./g, mass2 = 6000./g, mass3 = 4000./g *)
+  let default_radius1 = 20. in
+  let default_radius2 = 18. in
+  let default_radius3 = 16. in
+
+  (* Calculate densities to preserve original masses *)
+  let original_mass1 = 8000. /. g in
+  let original_mass2 = 6000. /. g in
+  let original_mass3 = 4000. /. g in
+
+  let volume1 = (4.0 /. 3.0) *. Float.pi *. (default_radius1 ** 3.0) in
+  let volume2 = (4.0 /. 3.0) *. Float.pi *. (default_radius2 ** 3.0) in
+  let volume3 = (4.0 /. 3.0) *. Float.pi *. (default_radius3 ** 3.0) in
+
+  let default_density1 = original_mass1 /. volume1 in
+  let default_density2 = original_mass2 /. volume2 in
+  let default_density3 = original_mass3 /. volume3 in
+
+  (* Use custom params if provided, otherwise use defaults *)
+  let (density1, radius1, density2, radius2, density3, radius3) = match custom_params with
+    | Some params -> params
+    | None -> (default_density1, default_radius1, default_density2, default_radius2, default_density3, default_radius3)
+  in
+
+  (* Calculate masses from density and radius *)
+  let volume1 = (4.0 /. 3.0) *. Float.pi *. (radius1 ** 3.0) in
+  let volume2 = (4.0 /. 3.0) *. Float.pi *. (radius2 ** 3.0) in
+  let volume3 = (4.0 /. 3.0) *. Float.pi *. (radius3 ** 3.0) in
+
+  let mass1 = density1 *. volume1 in
+  let mass2 = density2 *. volume2 in
+  let _mass3 = density3 *. volume3 in
 
   let separation = 120. in
   (* Compact separation to keep everything visible *)
@@ -156,21 +174,18 @@ let create_system () =
   let v2 = v_rel *. mass1 /. total_mass in
 
   (* Body 1 - Heavy star orbiting in YZ plane *)
-  let density1 = mass1 /. (4.0 /. 3.0 *. Float.pi *. (radius1 ** 3.0)) in
   let body1 =
     Body.make ~density:density1
       ~pos:(Vec3.make com_x (com_y -. r1) com_z)
       ~vel:(Vec3.make 0. 0. v1) ~radius:radius1
   in
   (* Body 2 - Medium companion orbiting opposite direction *)
-  let density2 = mass2 /. (4.0 /. 3.0 *. Float.pi *. (radius2 ** 3.0)) in
   let body2 =
     Body.make ~density:density2
       ~pos:(Vec3.make com_x (com_y +. r2) com_z)
       ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:radius2
   in
   (* Body 3 - Interloper approaching at an angle with slower velocity *)
-  let density3 = mass3 /. (4.0 /. 3.0 *. Float.pi *. (radius3 ** 3.0)) in
   let body3 =
     Body.make ~density:density3
       ~pos:(Vec3.make 180. 60. 100.) (* Even closer to keep in view *)
@@ -349,27 +364,115 @@ let draw_axes () =
     draw_line_3d start_y end_y grid_color
   done
 
-(* Draw 2D UI overlay *)
-let draw_ui is_colliding time_scale paused =
-  (* Draw exit button *)
-  draw_rectangle 10 560 80 30 gray;
+(* Slider helper functions *)
+let draw_slider x y width value min_val max_val label =
+  let slider_height = 6 in
+  let handle_size = 12. in
+
+  (* Calculate normalized position *)
+  let normalized = (value -. min_val) /. (max_val -. min_val) in
+  let filled_width = int_of_float (normalized *. float_of_int width) in
+  let handle_x = x + filled_width in
+
+  (* Filled part of track *)
+  draw_rectangle x (y + 3) filled_width slider_height (color 100 140 200 255);
+
+  (* Empty part of track *)
+  draw_rectangle (x + filled_width) (y + 3) (width - filled_width) slider_height (color 40 45 60 255);
+
+  (* Handle *)
+  draw_circle handle_x (y + 6) handle_size (color 120 140 200 255);
+  draw_circle handle_x (y + 6) (handle_size -. 2.) (color 200 220 255 255);
+
+  (* Label and value *)
+  draw_text label x (y - 18) 12 (color 200 200 220 255);
+  (* Format value appropriately - use scientific notation for large values *)
+  let value_str =
+    if value > 1e9 then Printf.sprintf "%.1e" value
+    else Printf.sprintf "%.1f" value
+  in
+  draw_text value_str (x + width + 10) (y - 2) 10 white
+
+let check_slider_drag x y width min_val max_val =
+  if is_mouse_button_down MouseButton.Left then
+    let mouse_x = get_mouse_x () in
+    let mouse_y = get_mouse_y () in
+
+    if mouse_y >= y - 10 && mouse_y <= y + 16 && mouse_x >= x && mouse_x <= x + width then
+      let normalized = float_of_int (mouse_x - x) /. float_of_int width in
+      let clamped = Float.max 0. (Float.min 1. normalized) in
+      Some (min_val +. clamped *. (max_val -. min_val))
+    else
+      None
+  else
+    None
+
+(* Draw 2D UI overlay with sidebar *)
+let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_planets =
+  (* Sidebar panel - right side *)
+  let sidebar_x = 600 in
+  let sidebar_y = 0 in
+  let sidebar_width = 200 in
+  let sidebar_height = 600 in
+
+  (* Draw sidebar background *)
+  draw_rectangle sidebar_x sidebar_y sidebar_width sidebar_height (color 20 25 35 230);
+  draw_rectangle sidebar_x sidebar_y 3 sidebar_height (color 80 100 140 255);
+
+  (* Title *)
+  draw_text "CONTROL PANEL" (sidebar_x + 15) 15 14 (color 150 180 255 255);
+  draw_line (sidebar_x + 10) 35 (sidebar_x + sidebar_width - 10) 35 (color 80 100 140 255);
+
+  (* Change notification *)
+  if has_changes then begin
+    draw_text "(Changes made -" (sidebar_x + 20) 45 10 (color 255 200 100 255);
+    draw_text " press A to apply)" (sidebar_x + 20) 57 10 (color 255 200 100 255)
+  end;
+
+  (* Planet controls - always show all 3 *)
+  let planet_colors = [
+    ("Planet 1", color 255 200 100 255);
+    ("Planet 2", color 100 150 255 255);
+    ("Planet 3", color 255 100 100 255);
+  ] in
+
+  List.iteri (fun i (name, col) ->
+    let (density, radius) = List.nth planet_params i in
+    let base_y = 75 + i * 160 in
+    let is_merged = i >= num_alive_planets in
+
+    (* Planet section header *)
+    draw_text name (sidebar_x + 15) base_y 13 col;
+    if is_merged then
+      draw_text "(merged)" (sidebar_x + 95) base_y 10 (color 150 150 150 255);
+    draw_circle (sidebar_x + 25) (base_y + 25) 8. col;
+
+    (* Density slider with centered range *)
+    draw_slider (sidebar_x + 50) (base_y + 60) 130 density 1e10 6e10 "Density";
+
+    (* Radius slider *)
+    draw_slider (sidebar_x + 50) (base_y + 110) 130 radius 10. 40. "Radius";
+
+    (* Separator *)
+    if i < 2 then
+      draw_line (sidebar_x + 10) (base_y + 145) (sidebar_x + sidebar_width - 10) (base_y + 145) (color 50 60 80 255)
+  ) planet_colors;
+
+  (* Bottom controls *)
+  draw_text (Printf.sprintf "Speed: %.1fx" time_scale) (sidebar_x + 15) 515 12 white;
+  draw_text (if paused then "[P] Resume" else "[P] Pause") (sidebar_x + 15) 535 11 (color 180 180 200 255);
+  draw_text "[A] Apply changes" (sidebar_x + 15) 553 11 (color 180 180 200 255);
+  draw_text "[R] Reset to default" (sidebar_x + 15) 571 11 (color 180 180 200 255);
+
+  (* Exit button - moved to left *)
+  draw_rectangle 10 560 80 30 (color 180 50 50 255);
   draw_text "EXIT" 25 570 20 white;
 
   (* Draw collision warning *)
   if is_colliding then begin
-    draw_rectangle 300 560 200 30 red;
-    draw_text "COLLISION!" 310 570 20 white
-  end;
-
-  (* Draw speed info *)
-  draw_text (Printf.sprintf "Speed: %.1fx" time_scale) 650 570 20 white;
-  draw_text "Z: faster | X: slower" 630 550 15 white;
-  draw_text (if paused then "P: unpause" else "P: pause") 630 530 15 white;
-  draw_text "R: reset simulation" 630 510 15 white;
-
-  (* Draw camera controls *)
-  draw_text "Left Click + Drag: Rotate Camera" 10 10 15 white;
-  draw_text "Mouse Wheel: Zoom" 10 30 15 white
+    draw_rectangle 250 560 150 30 red;
+    draw_text "COLLISION!" 260 570 18 white
+  end
 
 (* Check if exit button is clicked *)
 let check_exit_button () =
@@ -421,15 +524,67 @@ let update_camera camera theta phi radius =
   (new_camera, new_theta, new_phi, new_radius)
 
 let rec simulation_loop world trails time_scale paused camera theta phi radius
-    collision_anims =
+    collision_anims pending_params applied_params =
   (* Fixed physics timestep for accuracy *)
   let fixed_dt = 0.1 in
 
-  (* Check for reset *)
-  let reset_world, reset_trails, reset_anims =
-    if is_key_pressed Key.R then (create_system (), [ []; []; [] ], [])
-      (* Reset trails and animations *)
-    else (world, trails, collision_anims)
+  (* Handle slider interactions - always work with 3 planets *)
+  let sidebar_x = 600 in
+  let new_pending_params =
+    let params = ref pending_params in
+    for i = 0 to 2 do
+      let base_y = 75 + i * 160 in
+
+      (* Check density slider with centered ranges *)
+      (match check_slider_drag (sidebar_x + 50) (base_y + 60) 130 1e10 6e10 with
+      | Some new_density ->
+          params := List.mapi (fun j (old_d, old_r) ->
+            if j = i then (new_density, old_r) else (old_d, old_r)
+          ) !params
+      | None -> ());
+
+      (* Check radius slider *)
+      (match check_slider_drag (sidebar_x + 50) (base_y + 110) 130 10. 40. with
+      | Some new_radius ->
+          params := List.mapi (fun j (old_d, old_r) ->
+            if j = i then (old_d, new_radius) else (old_d, old_r)
+          ) !params
+      | None -> ())
+    done;
+    !params
+  in
+
+  (* Check for apply (A) or reset (R) *)
+  let reset_world, reset_trails, reset_anims, reset_pending, reset_applied =
+    if is_key_pressed Key.A then
+      (* Apply current slider values - reset simulation with custom params *)
+      let (d1, r1, d2, r2, d3, r3) = match new_pending_params with
+        | (d1, r1) :: (d2, r2) :: (d3, r3) :: _ -> (d1, r1, d2, r2, d3, r3)
+        | _ -> (3.5747e10, 20., 2.6810e10, 18., 1.7873e10, 16.) (* fallback to defaults *)
+      in
+      let custom_sys = create_system ~custom_params:(Some (d1, r1, d2, r2, d3, r3)) () in
+      let reset_params = [(d1, r1); (d2, r2); (d3, r3)] in
+      (custom_sys, [ []; []; [] ], [], reset_params, reset_params)
+    else if is_key_pressed Key.R then
+      (* Reset to original defaults completely *)
+      let g = 6.67e-11 in
+      let default_radius1 = 20. in
+      let default_radius2 = 18. in
+      let default_radius3 = 16. in
+      let original_mass1 = 8000. /. g in
+      let original_mass2 = 6000. /. g in
+      let original_mass3 = 4000. /. g in
+      let volume1 = (4.0 /. 3.0) *. Float.pi *. (default_radius1 ** 3.0) in
+      let volume2 = (4.0 /. 3.0) *. Float.pi *. (default_radius2 ** 3.0) in
+      let volume3 = (4.0 /. 3.0) *. Float.pi *. (default_radius3 ** 3.0) in
+      let default_density1 = original_mass1 /. volume1 in
+      let default_density2 = original_mass2 /. volume2 in
+      let default_density3 = original_mass3 /. volume3 in
+
+      let default_sys = create_system () in
+      let default_params = [(default_density1, default_radius1); (default_density2, default_radius2); (default_density3, default_radius3)] in
+      (default_sys, [ []; []; [] ], [], default_params, default_params)
+    else (world, trails, collision_anims, new_pending_params, applied_params)
   in
 
   (* Update physics only if not paused, using substeps for accuracy *)
@@ -454,6 +609,9 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
     if paused then (reset_trails, [])
     else update_trails reset_trails new_world all_collisions
   in
+
+  (* Check if parameters have changed *)
+  let has_changes = reset_pending <> reset_applied in
 
   (* Get current time for animations *)
   let current_time = Unix.gettimeofday () in
@@ -529,6 +687,9 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
     begin_drawing ();
     clear_background (color 5 5 15 255);  (* Dark space background *)
 
+    (* Restrict 3D rendering to left side (non-sidebar area) *)
+    begin_scissor_mode 0 0 600 600;
+
     (* 3D rendering *)
     begin_mode_3d new_camera;
 
@@ -560,14 +721,19 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
 
     end_mode_3d ();
 
+    (* End scissor mode *)
+    end_scissor_mode ();
+
+    (* Use params for UI display (shows what will be applied on reset) *)
     (* 2D UI overlay *)
-    draw_ui is_colliding new_time_scale new_paused;
+    let num_alive = List.length new_world in
+    draw_ui is_colliding new_time_scale new_paused reset_pending has_changes num_alive;
 
     end_drawing ();
 
     Unix.sleepf 0.016;
     simulation_loop new_world new_trails new_time_scale new_paused new_camera
-      new_theta new_phi new_radius new_collision_anims
+      new_theta new_phi new_radius new_collision_anims reset_pending reset_applied
   end
 
 let () =
@@ -599,9 +765,17 @@ let () =
   (* Initial empty collision animations *)
   let initial_collision_anims = [] in
 
+  (* Initial parameters - using defaults calculated in create_system *)
+  (* These match the original masses: 8000/g, 6000/g, 4000/g *)
+  let initial_params = [
+    (3.5747e10, 20.);  (* Planet 1: density, radius *)
+    (2.6810e10, 18.);  (* Planet 2: density, radius *)
+    (1.7873e10, 16.);  (* Planet 3: density, radius *)
+  ] in
+
   (* Start with 1.0x time scale (real-time) *)
   simulation_loop (create_system ()) initial_trails 1.0 false camera
-    initial_theta initial_phi initial_radius initial_collision_anims;
+    initial_theta initial_phi initial_radius initial_collision_anims initial_params initial_params;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =
