@@ -29,6 +29,77 @@ let dark_gray = color 40 40 40 255
 (* Trail configuration *)
 let max_trail_length = 120 (* Number of positions to keep in trail *)
 
+(* Generate stars once at initialization *)
+let stars = ref []
+
+let initialize_stars () =
+  Random.self_init ();
+  stars := List.init 1000 (fun _ ->
+    let theta = Random.float (2. *. Float.pi) in
+    let phi = Random.float Float.pi -. (Float.pi /. 2.) in
+    (* Stars between 800 and 1200 units away *)
+    let radius = 800. +. Random.float 400. in
+
+    let x = radius *. Float.cos phi *. Float.cos theta in
+    let y = radius *. Float.sin phi in
+    let z = radius *. Float.cos phi *. Float.sin theta in
+
+    let brightness = 200 + Random.int 56 in
+    let size = 1.5 +. Random.float 2.0 in
+
+    (x, y, z, brightness, size)
+  )
+
+let draw_starbox camera =
+  let cam_pos = Camera3D.position camera in
+
+  (* Draw the starbox - stars follow camera *)
+  List.iter (fun (x, y, z, brightness, size) ->
+    let star_pos = Vector3.create
+      (Vector3.x cam_pos +. x)
+      (Vector3.y cam_pos +. y)
+      (Vector3.z cam_pos +. z)
+    in
+    let star_color = color brightness brightness 255 255 in
+    draw_sphere star_pos size star_color
+  ) !stars
+
+let draw_infinite_grid camera =
+  let cam_pos = Camera3D.position camera in
+  let cam_x = Vector3.x cam_pos in
+  let cam_z = Vector3.z cam_pos in
+  
+  let grid_spacing = 50. in
+  let grid_center_x = Float.round (cam_x /. grid_spacing) *. grid_spacing in
+  let grid_center_z = Float.round (cam_z /. grid_spacing) *. grid_spacing in
+  
+  let visible_range = 800. in
+  let num_lines = 20 in
+  
+  for i = -num_lines to num_lines do
+    let offset = float_of_int i *. grid_spacing in
+    
+    let dist = Float.abs offset in
+    let fade = Float.max 0. (1. -. (dist /. visible_range)) in
+    let alpha = int_of_float (fade *. 50.) in
+    
+    if alpha > 5 then begin
+      let grid_color = color 30 30 50 alpha in
+      
+      let start_x = Vector3.create 
+        (grid_center_x -. visible_range) 0. (grid_center_z +. offset) in
+      let end_x = Vector3.create 
+        (grid_center_x +. visible_range) 0. (grid_center_z +. offset) in
+      draw_line_3d start_x end_x grid_color;
+      
+      let start_z = Vector3.create 
+        (grid_center_x +. offset) 0. (grid_center_z -. visible_range) in
+      let end_z = Vector3.create 
+        (grid_center_x +. offset) 0. (grid_center_z +. visible_range) in
+      draw_line_3d start_z end_z grid_color
+    end
+  done
+
 (* Trail type: list of Vec3 positions for each body *)
 type trails = Vec3.v list list
 
@@ -441,13 +512,15 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
   else begin
     (* Start drawing *)
     begin_drawing ();
-    clear_background black;
+    clear_background (color 5 5 15 255);  (* Dark space background *)
 
     (* 3D rendering *)
     begin_mode_3d new_camera;
 
-    (* Draw axis indicators *)
-    draw_axes ();
+    (* Draw in order: back to front *)
+    draw_starbox new_camera;       (* Stars first - farthest *)
+    draw_infinite_grid new_camera; (* Grid second *)
+    draw_axes ();                  (* Axis indicators at origin *)
 
     (* Draw trails first (behind bodies) *)
     let all_trail_colors =
@@ -487,6 +560,8 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
 let () =
   init_window 800 600 "3D Gravity Simulation";
   set_target_fps 60;
+
+  initialize_stars ();  (* Generate stars once *)
 
   (* Setup 3D camera closer to action *)
   let camera =
