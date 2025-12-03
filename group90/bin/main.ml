@@ -29,6 +29,9 @@ let dark_gray = color 40 40 40 255
 (* Trail configuration *)
 let max_trail_length = 120 (* Number of positions to keep in trail *)
 
+(* Render scale: physics coordinates to visual coordinates *)
+let render_scale = 0.1  (* 1 physics unit = 0.1 render units *)
+
 (* Generate stars once at initialization *)
 let stars = ref []
 
@@ -60,6 +63,7 @@ let draw_starbox camera =
       (Vector3.y cam_pos +. y)
       (Vector3.z cam_pos +. z)
     in
+
     let star_color = color brightness brightness 255 255 in
     draw_sphere star_pos size star_color
   ) !stars
@@ -177,8 +181,11 @@ let create_system () =
 
 let draw_body body body_color =
   let pos = Body.pos body in
-  let radius = Body.radius body in
-  let position = Vector3.create (Vec3.x pos) (Vec3.y pos) (Vec3.z pos) in
+  let radius = Body.radius body *. render_scale in
+  let position = Vector3.create 
+    (render_scale *. Vec3.x pos) 
+    (render_scale *. Vec3.y pos) 
+    (render_scale *. Vec3.z pos) in
   draw_sphere position radius body_color
 
 (* Draw trail for a single body *)
@@ -186,10 +193,16 @@ let draw_trail trail trail_color =
   let rec draw_segments = function
     | [] | [ _ ] -> ()
     | p1 :: p2 :: rest ->
-        let pos1 = Vector3.create (Vec3.x p1) (Vec3.y p1) (Vec3.z p1) in
-        let pos2 = Vector3.create (Vec3.x p2) (Vec3.y p2) (Vec3.z p2) in
+        let pos1 = Vector3.create 
+          (render_scale *. Vec3.x p1) 
+          (render_scale *. Vec3.y p1) 
+          (render_scale *. Vec3.z p1) in
+        let pos2 = Vector3.create 
+          (render_scale *. Vec3.x p2) 
+          (render_scale *. Vec3.y p2) 
+          (render_scale *. Vec3.z p2) in
         (* Draw thicker lines by drawing small spheres at each position *)
-        draw_sphere pos1 1.5 trail_color;
+        draw_sphere pos1 (1.5 *. render_scale) trail_color;
         draw_line_3d pos1 pos2 trail_color;
         draw_segments (p2 :: rest)
   in
@@ -248,8 +261,10 @@ let draw_collision_animation anim current_time =
   if elapsed < anim.duration then begin
     let progress = elapsed /. anim.duration in
     let pos =
-      Vector3.create (Vec3.x anim.position) (Vec3.y anim.position)
-        (Vec3.z anim.position)
+      Vector3.create 
+        (render_scale *. Vec3.x anim.position)
+        (render_scale *. Vec3.y anim.position)
+        (render_scale *. Vec3.z anim.position)
     in
 
     (* Get color components *)
@@ -259,7 +274,7 @@ let draw_collision_animation anim current_time =
 
     (* Single expanding sphere that fades out *)
     let alpha = int_of_float (255. *. (1. -. progress)) in
-    let radius = anim.max_radius *. progress in
+    let radius = anim.max_radius *. progress *. render_scale in
 
     if alpha > 0 && radius > 0. then
       draw_sphere pos radius (color r g b alpha)
@@ -383,10 +398,10 @@ let update_camera camera theta phi radius =
     else (theta, phi)
   in
 
-  (* Zoom with mouse wheel *)
+  (* Zoom with mouse wheel - allow very close and very far zoom *)
   let wheel = get_mouse_wheel_move () in
   let new_radius =
-    Float.max 100. (Float.min 2000. (radius -. (wheel *. 50.)))
+    Float.max 10. (Float.min 50000. (radius -. (wheel *. 100.)))
   in
 
   (* Convert spherical to Cartesian *)
@@ -564,7 +579,7 @@ let () =
   (* Setup 3D camera closer to action *)
   let camera =
     Camera3D.create
-      (Vector3.create 400. 300. 400.) (* position: closer view *)
+      (Vector3.create 150. 100. 150.) (* position: much closer view *)
       (Vector3.create 0. 0. 0.) (* target: origin *)
       (Vector3.create 0. 1. 0.) (* up vector *)
       70. (* fov - wider to see more *)
@@ -573,10 +588,10 @@ let () =
 
   (* Initial spherical coordinates for camera *)
   let initial_radius =
-    Float.sqrt ((400. *. 400.) +. (300. *. 300.) +. (400. *. 400.))
+    Float.sqrt ((150. *. 150.) +. (100. *. 100.) +. (150. *. 150.))
   in
-  let initial_theta = Float.atan2 400. 400. in
-  let initial_phi = Float.asin (300. /. initial_radius) in
+  let initial_theta = Float.atan2 150. 150. in
+  let initial_phi = Float.asin (100. /. initial_radius) in
 
   (* Initial empty trails for 3 bodies *)
   let initial_trails = [ []; []; [] ] in
