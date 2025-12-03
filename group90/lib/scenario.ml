@@ -23,28 +23,38 @@ let calculate_mass ~density ~radius =
 (** Create a three-body orbital system with custom parameters.
     Parameters: (density1, radius1, density2, radius2, density3, radius3) *)
 let create_three_body_system ?(custom_params = None) () =
-  (* Default parameters - densities calculated to match original masses *)
-  let default_radius1 = 20. in
-  let default_radius2 = 18. in
-  let default_radius3 = 16. in
-
-  (* Calculate densities to preserve original masses *)
-  let original_mass1 = 8000. /. g in
-  let original_mass2 = 6000. /. g in
-  let original_mass3 = 4000. /. g in
-
-  let volume1 = (4.0 /. 3.0) *. Float.pi *. (default_radius1 ** 3.0) in
-  let volume2 = (4.0 /. 3.0) *. Float.pi *. (default_radius2 ** 3.0) in
-  let volume3 = (4.0 /. 3.0) *. Float.pi *. (default_radius3 ** 3.0) in
-
-  let default_density1 = original_mass1 /. volume1 in
-  let default_density2 = original_mass2 /. volume2 in
-  let default_density3 = original_mass3 /. volume3 in
-
-  (* Use custom params if provided, otherwise use defaults *)
+  (* Random variations for position and velocity *)
+  let rand_range min max = min +. (Random.float (max -. min)) in
+  
+  (* Randomize masses to be similar but not identical *)
+  let base_mass = 7000. /. g in (* Increased mass for higher density *)
+  let mass_variation = 0.3 in (* ±30% variation *)
+  
+  let mass1 = base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation) in
+  let mass2 = base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation) in
+  let mass3 = base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation) in
+  
+  (* Randomize radii to be similar *)
+  let base_radius = 10. in
+  let radius_variation = 0.2 in (* ±20% variation *)
+  
+  let radius1 = base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation) in
+  let radius2 = base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation) in
+  let radius3 = base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation) in
+  
+  (* Calculate densities from mass and radius *)
+  let volume1 = (4.0 /. 3.0) *. Float.pi *. (radius1 ** 3.0) in
+  let volume2 = (4.0 /. 3.0) *. Float.pi *. (radius2 ** 3.0) in
+  let volume3 = (4.0 /. 3.0) *. Float.pi *. (radius3 ** 3.0) in
+  
+  let density1 = mass1 /. volume1 in
+  let density2 = mass2 /. volume2 in
+  let density3 = mass3 /. volume3 in
+  
+  (* Use custom params if provided (override randomization) *)
   let (density1, radius1, density2, radius2, density3, radius3) = match custom_params with
     | Some params -> params
-    | None -> (default_density1, default_radius1, default_density2, default_radius2, default_density3, default_radius3)
+    | None -> (density1, radius1, density2, radius2, density3, radius3)
   in
 
   (* Calculate masses from density and radius *)
@@ -52,7 +62,39 @@ let create_three_body_system ?(custom_params = None) () =
   let mass2 = calculate_mass ~density:density2 ~radius:radius2 in
   let _mass3 = calculate_mass ~density:density3 ~radius:radius3 in
 
-  let separation = 120. in
+  (* Increased separation for bodies to start further apart *)
+  let separation = 150. in
+
+  (* Random position offsets - reduced for closer spawn *)
+  let offset_x1 = rand_range (-15.) 15. in
+  let offset_y1 = rand_range (-15.) 15. in
+  let offset_z1 = rand_range (-15.) 15. in
+  
+  let offset_x2 = rand_range (-15.) 15. in
+  let offset_y2 = rand_range (-15.) 15. in
+  let offset_z2 = rand_range (-15.) 15. in
+  
+  let offset_x3 = rand_range (-20.) 20. in
+  let offset_y3 = rand_range (-20.) 20. in
+  let offset_z3 = rand_range (-20.) 20. in
+
+  (* Fully random velocity directions for each body *)
+  let speed_range_max = 6.0 in
+  
+  (* Body 1 - random direction and speed *)
+  let vel1_x = rand_range (-. speed_range_max) speed_range_max in
+  let vel1_y = rand_range (-. speed_range_max) speed_range_max in
+  let vel1_z = rand_range (-. speed_range_max) speed_range_max in
+  
+  (* Body 2 - random direction and speed *)
+  let vel2_x = rand_range (-. speed_range_max) speed_range_max in
+  let vel2_y = rand_range (-. speed_range_max) speed_range_max in
+  let vel2_z = rand_range (-. speed_range_max) speed_range_max in
+  
+  (* Body 3 - random direction and speed *)
+  let vel3_x = rand_range (-. speed_range_max) speed_range_max in
+  let vel3_y = rand_range (-. speed_range_max) speed_range_max in
+  let vel3_z = rand_range (-. speed_range_max) speed_range_max in
 
   (* Center of mass at origin *)
   let com_x = 0. in
@@ -63,29 +105,30 @@ let create_three_body_system ?(custom_params = None) () =
   let r1 = separation *. mass2 /. (mass1 +. mass2) in
   let r2 = separation *. mass1 /. (mass1 +. mass2) in
 
-  (* Calculate orbital velocities *)
-  let total_mass = mass1 +. mass2 in
-  let v_rel = Float.sqrt (g *. total_mass /. separation) in
-  let v1 = v_rel *. mass2 /. total_mass in
-  let v2 = v_rel *. mass1 /. total_mass in
-
-  (* Body 1 - Heavy star orbiting in YZ plane *)
+  (* Body 1 - First body with fully random velocity *)
   let body1 =
     Body.make ~density:density1
-      ~pos:(Vec3.make com_x (com_y -. r1) com_z)
-      ~vel:(Vec3.make 0. 0. v1) ~radius:radius1
+      ~pos:(Vec3.make (com_x +. offset_x1) (com_y -. r1 +. offset_y1) (com_z +. offset_z1))
+      ~vel:(Vec3.make vel1_x vel1_y vel1_z)
+      ~radius:radius1
   in
-  (* Body 2 - Medium companion orbiting opposite direction *)
+  (* Body 2 - Second body with fully random velocity *)
   let body2 =
     Body.make ~density:density2
-      ~pos:(Vec3.make com_x (com_y +. r2) com_z)
-      ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:radius2
+      ~pos:(Vec3.make (com_x +. offset_x2) (com_y +. r2 +. offset_y2) (com_z +. offset_z2))
+      ~vel:(Vec3.make vel2_x vel2_y vel2_z)
+      ~radius:radius2
   in
-  (* Body 3 - Interloper approaching at an angle *)
+  (* Body 3 - Third body with fully random velocity *)
+  let third_body_distance = rand_range 180. 240. in
+  let third_body_angle = rand_range 0. (2. *. Float.pi) in
   let body3 =
     Body.make ~density:density3
-      ~pos:(Vec3.make 180. 60. 100.)
-      ~vel:(Vec3.make (-1.0) (-0.4) (-0.6))
+      ~pos:(Vec3.make 
+        (third_body_distance *. Float.cos third_body_angle +. offset_x3)
+        (rand_range 40. 80. +. offset_y3)
+        (third_body_distance *. Float.sin third_body_angle +. offset_z3))
+      ~vel:(Vec3.make vel3_x vel3_y vel3_z)
       ~radius:radius3
   in
   [ body1; body2; body3 ]
