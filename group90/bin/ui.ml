@@ -99,7 +99,7 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
   (* Change notification *)
   if has_changes then begin
     draw_text "(Changes applied" (sidebar_x + 20) 45 10 (color 100 255 100 255);
-    draw_text " live - A to restart)" (sidebar_x + 20) 57 10 (color 100 255 100 255)
+    draw_text " live - F to restart)" (sidebar_x + 20) 57 10 (color 100 255 100 255)
   end;
 
   (* Planet controls - always show all 3 *)
@@ -136,7 +136,7 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
   draw_text "[Z] Faster  [X] Slower" (sidebar_x + 15) 518 10 (color 180 180 200 255);
   draw_text (if paused then "[P] Resume" else "[P] Pause") (sidebar_x + 15) 535 11 (color 180 180 200 255);
   draw_line (sidebar_x + 10) 550 (sidebar_x + sidebar_width - 10) 550 (color 50 60 80 255);
-  draw_text "[A] Restart sim" (sidebar_x + 15) 558 11 (color 180 180 200 255);
+  draw_text "[F] Restart sim" (sidebar_x + 15) 558 11 (color 180 180 200 255);
   draw_text "[R] Reset to defaults" (sidebar_x + 15) 576 11 (color 180 180 200 255);
 
   (* Camera controls - bottom left *)

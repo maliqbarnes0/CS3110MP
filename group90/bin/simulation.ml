@@ -130,9 +130,9 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
     !params
   in
 
-  (* Check for apply (A) or reset (R) *)
+  (* Check for apply (F) or reset (R) *)
   let reset_world, reset_trails, reset_anims, reset_pending, reset_applied =
-    if is_key_pressed Key.A then
+    if is_key_pressed Key.F then
       (* Apply current slider values - reset simulation with custom params *)
       let (d1, r1, d2, r2, d3, r3) = match new_pending_params with
         | (d1, r1) :: (d2, r2) :: (d3, r3) :: _ -> (d1, r1, d2, r2, d3, r3)
