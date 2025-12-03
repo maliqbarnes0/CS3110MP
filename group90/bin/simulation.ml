@@ -102,7 +102,7 @@ and handle_keyboard_input state =
       let new_bodies = Scenario.create_three_body_system
         ~custom_params:(Some (extract_params_tuple state_after_scenario.Simulation_state.pending_params)) () in
       let state_with_bodies = Simulation_state.set_world state_after_scenario new_bodies in
-      let state_with_trails = Simulation_state.set_trails state_with_bodies [ Active []; Active []; Active [] ] in
+      let state_with_trails = Simulation_state.set_trails state_with_bodies [] in
       let state_with_anims = Simulation_state.set_collision_anims state_with_trails [] in
       Simulation_state.apply_params state_with_anims
     end else
@@ -239,19 +239,20 @@ and render_frame state camera =
 
   (* Draw collision animations *)
   let current_time = Unix.gettimeofday () in
+  let render_scale = 0.1 in  (* Match render.ml's render_scale *)
   List.iter
     (fun anim ->
       let age = current_time -. anim.Simulation_state.start_time in
       let progress = age /. anim.duration in
       if progress < 1.0 then begin
-        let current_radius = anim.max_radius *. progress in
+        let current_radius = anim.max_radius *. progress *. render_scale in
         let alpha = int_of_float (255.0 *. (1.0 -. progress)) in
         let (r, g, b, _) = anim.color in
         let fade_color = Raylib.Color.create r g b alpha in
         let pos_vec3 = Raylib.Vector3.create
-          (Vec3.x anim.position)
-          (Vec3.y anim.position)
-          (Vec3.z anim.position) in
+          (render_scale *. Vec3.x anim.position)
+          (render_scale *. Vec3.y anim.position)
+          (render_scale *. Vec3.z anim.position) in
         Raylib.draw_sphere pos_vec3 current_radius fade_color
       end
     )

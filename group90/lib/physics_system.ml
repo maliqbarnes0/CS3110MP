@@ -24,12 +24,25 @@ let update_physics ~time_scale ~world =
   in
   do_steps world [] num_steps
 
-(** Calculate collision point between two bodies *)
+(** Calculate collision point between two bodies - point on surface where they touch *)
 let calc_collision_point b1 b2 =
   let pos1 = Body.pos b1 in
   let pos2 = Body.pos b2 in
+  let r1 = Body.radius b1 in
+
   let open Vec3 in
-  0.5 *~ (pos1 + pos2)
+  (* Vector from body1 to body2 *)
+  let direction = pos2 - pos1 in
+  let distance = norm direction in
+
+  if distance < 0.0001 then
+    (* Bodies are at same position, use midpoint *)
+    0.5 *~ (pos1 + pos2)
+  else
+    (* Calculate contact point: move from pos1 toward pos2 by radius of body1 *)
+    let normalized_dir = normalize direction in
+    let contact_distance = r1 in  (* Distance from center of body1 to contact point *)
+    pos1 + (contact_distance *~ normalized_dir)
 
 (** Update trails with new positions. Returns (new_trails, collision_pairs) *)
 let update_trails trails world all_collisions =
