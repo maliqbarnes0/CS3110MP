@@ -1,3 +1,18 @@
+(**
+   Core simulation module - handles physics updates and main game loop.
+
+   This module is the heart of the application, coordinating:
+   - Physics simulation using Group90.Engine
+   - User input processing (keyboard and sliders)
+   - Camera updates via cameracontrol.ml
+   - Rendering delegation to render.ml
+   - UI updates via ui.ml
+   - State management (trails, collision animations, planet parameters)
+
+   The simulation_loop is a recursive function that runs each frame,
+   maintaining all state through its parameters.
+*)
+
 open Raylib
 open Group90
 open Unix

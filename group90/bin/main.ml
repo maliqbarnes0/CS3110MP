@@ -1,3 +1,14 @@
+(** Main entry point for the 3D Gravity Simulation.
+
+    This module initializes the application window, sets up the initial camera,
+    and bootstraps the simulation. It delegates to:
+    - render.ml: For star initialization and 3D rendering
+    - simulation.ml: For the main physics and game loop
+    - ui.ml: For 2D interface elements
+
+    Flow: Window setup → Star generation → Camera initialization → Start
+    simulation loop → Exit screen *)
+
 open Raylib
 open Unix
 
@@ -5,7 +16,9 @@ let () =
   init_window 800 600 "3D Gravity Simulation";
   set_target_fps 60;
 
-  Render.initialize_stars ();  (* Generate stars once *)
+  Render.initialize_stars ();
+
+  (* Generate stars once *)
 
   (* Setup 3D camera closer to action *)
   let camera =
@@ -32,15 +45,22 @@ let () =
 
   (* Initial parameters - using defaults calculated in create_system *)
   (* These match the original masses: 8000/g, 6000/g, 4000/g *)
-  let initial_params = [
-    (3.5747e10, 20.);  (* Planet 1: density, radius *)
-    (2.6810e10, 18.);  (* Planet 2: density, radius *)
-    (1.7873e10, 16.);  (* Planet 3: density, radius *)
-  ] in
+  let initial_params =
+    [
+      (3.5747e10, 20.);
+      (* Planet 1: density, radius *)
+      (2.6810e10, 18.);
+      (* Planet 2: density, radius *)
+      (1.7873e10, 16.);
+      (* Planet 3: density, radius *)
+    ]
+  in
 
   (* Start with 1.0x time scale (real-time) *)
-  Simulation.simulation_loop (Simulation.create_system ()) initial_trails 1.0 false camera
-    initial_theta initial_phi initial_radius initial_collision_anims initial_params initial_params;
+  Simulation.simulation_loop
+    (Simulation.create_system ())
+    initial_trails 1.0 false camera initial_theta initial_phi initial_radius
+    initial_collision_anims initial_params initial_params;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =

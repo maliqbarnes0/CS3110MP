@@ -1,3 +1,18 @@
+(**
+   User Interface module - handles 2D overlay and UI interactions.
+
+   Responsibilities:
+   - Drawing the right sidebar control panel (x=600-800)
+   - Rendering interactive sliders for planet density and radius
+   - Displaying simulation status (speed, pause, collisions)
+   - Providing control instructions and key bindings
+   - Managing UI color palette
+   - Handling mouse interactions (sliders, buttons)
+   - Detecting mouse-over-sidebar to prevent camera control conflicts
+
+   Used by simulation.ml to render UI and process UI interactions.
+*)
+
 open Raylib
 
 (* Helper to create Raylib Color *)
