@@ -40,7 +40,7 @@ let update_camera camera theta phi radius =
   (* Zoom with mouse wheel - only if not over sidebar *)
   let wheel = if not mouse_over_sidebar then get_mouse_wheel_move () else 0. in
   let new_radius =
-    Float.max 10. (Float.min 50000. (radius -. (wheel *. 100.)))
+    Float.max 10. (Float.min 50000. (radius -. (wheel *. 10.)))
   in
 
   (* Camera panning with WASD/QE - movement relative to camera orientation *)
