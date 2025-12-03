@@ -34,7 +34,7 @@ let stars = ref []
 
 let initialize_stars () =
   Random.self_init ();
-  stars := List.init 1000 (fun _ ->
+  stars := List.init 400 (fun _ ->
     let theta = Random.float (2. *. Float.pi) in
     let phi = Random.float Float.pi -. (Float.pi /. 2.) in
     (* Stars between 800 and 1200 units away *)
@@ -519,8 +519,6 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
 
     (* Draw in order: back to front *)
     draw_starbox new_camera;       (* Stars first - farthest *)
-    draw_infinite_grid new_camera; (* Grid second *)
-    draw_axes ();                  (* Axis indicators at origin *)
 
     (* Draw trails first (behind bodies) *)
     let all_trail_colors =
