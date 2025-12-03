@@ -118,22 +118,30 @@ let num_bodies state = List.length state.world
 
 (** Update a specific planet's density *)
 let update_planet_density state planet_idx new_density =
+  (* Update pending params for UI display *)
   let new_params =
     List.mapi
       (fun i (old_d, old_r) ->
         if i = planet_idx then (new_density, old_r) else (old_d, old_r))
       state.pending_params
   in
+  (* Apply live to the actual body if it exists *)
+  if planet_idx < List.length state.world then
+    Body.set_density new_density (List.nth state.world planet_idx);
   { state with pending_params = new_params }
 
 (** Update a specific planet's radius *)
 let update_planet_radius state planet_idx new_radius =
+  (* Update pending params for UI display *)
   let new_params =
     List.mapi
       (fun i (old_d, old_r) ->
         if i = planet_idx then (old_d, new_radius) else (old_d, old_r))
       state.pending_params
   in
+  (* Apply live to the actual body if it exists *)
+  if planet_idx < List.length state.world then
+    Body.set_radius new_radius (List.nth state.world planet_idx);
   { state with pending_params = new_params }
 
 (** Add collision animations for collision pairs *)
