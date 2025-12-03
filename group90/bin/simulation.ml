@@ -98,7 +98,7 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
   (* Fixed physics timestep for accuracy *)
   let fixed_dt = 0.1 in
 
-  (* Handle slider interactions - always work with 3 planets *)
+  (* Handle slider interactions - apply changes live to planets *)
   let sidebar_x = 600 in
   let new_pending_params =
     let params = ref pending_params in
@@ -110,7 +110,10 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
       | Some new_density ->
           params := List.mapi (fun j (old_d, old_r) ->
             if j = i then (new_density, old_r) else (old_d, old_r)
-          ) !params
+          ) !params;
+          (* Apply live to planet if it exists *)
+          if i < List.length world then
+            Group90.Body.set_density new_density (List.nth world i)
       | None -> ());
 
       (* Check radius slider *)
@@ -118,7 +121,10 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius
       | Some new_radius ->
           params := List.mapi (fun j (old_d, old_r) ->
             if j = i then (old_d, new_radius) else (old_d, old_r)
-          ) !params
+          ) !params;
+          (* Apply live to planet if it exists *)
+          if i < List.length world then
+            Group90.Body.set_radius new_radius (List.nth world i)
       | None -> ())
     done;
     !params

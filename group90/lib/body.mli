@@ -28,3 +28,9 @@ val with_pos : Vec3.v -> b -> b
 
 (** [with_vel v b] is a body identical to [b] except with velocity [v]. *)
 val with_vel : Vec3.v -> b -> b
+
+(** [set_density d b] sets the density of [b] to [d] and updates its mass. *)
+val set_density : float -> b -> unit
+
+(** [set_radius r b] sets the radius of [b] to [r] and updates its mass. *)
+val set_radius : float -> b -> unit
