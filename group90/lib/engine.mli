@@ -49,3 +49,11 @@ val check_collision : Body.b -> Body.b -> bool
     @param world The collection of all bodies.
     @return A list of tuples, each containing a pair of colliding bodies. *)
 val find_collisions : w -> (Body.b * Body.b) list
+
+(** [step_with_collisions ~dt world] advances the simulation by one time step and returns
+    collision information.
+    Similar to [step] but also returns a list of body pairs that collided during this step.
+    @param dt Time step in seconds.
+    @param world The current state of all bodies.
+    @return A tuple of (new world state, list of collision pairs). *)
+val step_with_collisions : dt:float -> w -> w * (Body.b * Body.b) list

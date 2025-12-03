@@ -50,7 +50,7 @@ let find_collisions world =
   in
   aux [] world
 
-let resolve_collisions world = 
+let resolve_collisions world =
   let collisions = find_collisions world in
 
   let merged, to_remove =
@@ -62,8 +62,23 @@ let resolve_collisions world =
       collisions
   in
   let remaining = List.filter (fun b -> not (List.mem b to_remove)) world in
-  
+
   merged @ remaining
+
+let resolve_collisions_with_info world =
+  let collisions = find_collisions world in
+
+  let merged, to_remove =
+    List.fold_left
+      (fun (merged_acc, remove_acc) (b1, b2) ->
+        let merged_body = merge b1 b2 in
+        (merged_body :: merged_acc, b1 :: b2 :: remove_acc))
+      ([], [])
+      collisions
+  in
+  let remaining = List.filter (fun b -> not (List.mem b to_remove)) world in
+
+  (merged @ remaining, collisions)
 
 let gravitational_force b1 ~by:b2 =
   let p1 = Body.pos b1 in
@@ -95,3 +110,15 @@ let step ~dt world =
       Body.(b |> with_vel new_vel |> with_pos new_pos))
     world in
     resolve_collisions update
+
+let step_with_collisions ~dt world =
+  let update = List.map
+    (fun b ->
+      let f = net_force_on b world in
+      let a = Vec3.(1. /. Body.mass b *~ f) in
+      let old_vel = Body.vel b in
+      let new_vel = Vec3.(old_vel + (dt *~ a)) in
+      let new_pos = Vec3.(Body.pos b + (dt *~ old_vel)) in
+      Body.(b |> with_vel new_vel |> with_pos new_pos))
+    world in
+    resolve_collisions_with_info update
