@@ -1,35 +1,30 @@
-(** Celestial body module for N-body physics simulation. Represents a body with
-    mass, position, and velocity in 3D space. *)
+(** Celestial body module for N-body physics simulation. *)
 
+(** The type of a celestial body. *)
 type b
-(** The type representing a celestial body (planet, star, asteroid, etc.). *)
 
+(** [make ~density ~pos ~vel ~radius] is a body with density [density] (in kg/m³),
+    position [pos], velocity [vel], and radius [radius] (in meters).
+    Mass is calculated from density and radius using the sphere volume formula. *)
 val make : density:float -> pos:Vec3.v -> vel:Vec3.v -> radius:float -> b
-(** [make ~density ~pos ~vel ~radius] creates a new body with the specified
-    density (in kg/m³), position (as a 3D vector in meters), velocity (as a 3D
-    vector in meters per second), and radius (in meters). Mass is automatically
-    calculated from density and radius using the sphere volume formula. *)
 
+(** [mass b] is the mass of [b] in kilograms. *)
 val mass : b -> float
-(** [mass b] returns the mass of body [b] in kilograms. *)
 
+(** [pos b] is the position vector of [b]. *)
 val pos : b -> Vec3.v
-(** [pos b] returns the current position vector of body [b] in meters. *)
 
+(** [vel b] is the velocity vector of [b]. *)
 val vel : b -> Vec3.v
-(** [vel b] returns the current velocity vector of body [b] in meters per
-    second. *)
 
+(** [radius b] is the radius of [b] in meters. *)
 val radius : b -> float
-(** [radius b] returns the radius of body [b] in meters. *)
 
+(** [density b] is the density of [b] in kg/m³. *)
 val density : b -> float
-(** [density b] returns the density of body [b] in kilograms per cubic meter. *)
 
+(** [with_pos p b] is a body identical to [b] except with position [p]. *)
 val with_pos : Vec3.v -> b -> b
-(** [with_pos p b] returns a new body identical to [b] but with position [p].
-    Useful for updating position during simulation steps without mutation. *)
 
+(** [with_vel v b] is a body identical to [b] except with velocity [v]. *)
 val with_vel : Vec3.v -> b -> b
-(** [with_vel v b] returns a new body identical to [b] but with velocity [v].
-    Useful for updating velocity during simulation steps without mutation. *)

@@ -1,59 +1,34 @@
-(** N-body physics simulation engine.
-    Implements gravitational interactions and numerical integration for multiple bodies. *)
+(** N-body physics simulation engine. *)
 
-(** [g] is the gravitational constant in SI units: 6.67e-11 N⋅m²/kg².
-    Used in Newton's law of universal gravitation: F = G * m1 * m2 / r² *)
+(** [g] is the gravitational constant: 6.67e-11 N⋅m²/kg². *)
 val g : float
 
-(** The type representing a world (collection of celestial bodies).
-    A world is a list of bodies that interact gravitationally. *)
+(** The type of a world, which is a collection of bodies. *)
 type w = Body.b list 
 
-(** [gravitational_force b1 ~by:b2] computes the gravitational force vector
-    exerted on body [b1] by body [b2].
-    Uses Newton's law: F = G * m1 * m2 / r² in the direction from [b1] to [b2].
-    Returns [Vec3.zer0] if bodies occupy the same position to avoid singularity.
-    @param b1 The body experiencing the force.
-    @param by The body exerting the force.
-    @return Force vector in Newtons pointing from [b1] toward [b2]. *)
+(** [gravitational_force b1 ~by:b2] is the gravitational force vector on [b1]
+    exerted by [b2], computed using Newton's law F = G m₁ m₂ / r².
+    If [b1] and [b2] occupy the same position, the result is [Vec3.zer0]. *)
 val gravitational_force : Body.b -> by:Body.b -> Vec3.v
 
-(** [net_force_on b world] computes the total gravitational force acting on body [b]
-    from all other bodies in [world].
-    Sums the pairwise gravitational forces from each body in the world.
-    @param b The body to compute net force for.
-    @param world The collection of all bodies (including [b]).
-    @return Net force vector in Newtons. *)
+(** [net_force_on b world] is the total gravitational force on [b] from all
+    other bodies in [world]. *)
 val net_force_on : Body.b -> w -> Vec3.v
 
-(** [step ~dt world] advances the simulation by one time step using numerical integration.
-    Uses Euler integration: for each body, computes net force, then acceleration (F=ma),
-    updates velocity (v' = v + a*dt), and updates position (p' = p + v'*dt).
-    @param dt Time step in seconds (smaller values give more accurate results).
-    @param world The current state of all bodies.
-    @return New world state after advancing by time [dt].
-    Note: This uses explicit Euler method which may accumulate energy errors over time.
-          For GUI: typical dt values range from 0.01 to 1000 depending on scale. *)
+(** [step ~dt world] is the state of [world] advanced by time [dt] using
+    Euler integration. For each body, computes net force, acceleration (F=ma),
+    updates velocity (v' = v + a·dt), and position (p' = p + v'·dt). *)
 val step : dt:float -> w -> w
 
-(** [check_collision b1 b2] checks if two bodies are colliding based on their positions and radii.
-    A collision occurs if the distance between the centers of the bodies is less than
-    or equal to the sum of their radii.
-    @param b1 The first body.
-    @param b2 The second body.
-    @return [true] if the bodies are colliding, [false] otherwise. *)
+(** [check_collision b1 b2] is [true] if [b1] and [b2] are colliding.
+    Bodies collide when the distance between their centers is less than or
+    equal to the sum of their radii. *)
 val check_collision : Body.b -> Body.b -> bool
 
-(** [find_collisions world] returns a list of all pairs of bodies in [world] that are colliding.
-    Iterates through all unique pairs of bodies and checks for collisions using [check_collision].
-    @param world The collection of all bodies.
-    @return A list of tuples, each containing a pair of colliding bodies. *)
+(** [find_collisions world] is a list of all pairs of colliding bodies in [world]. *)
 val find_collisions : w -> (Body.b * Body.b) list
 
-(** [step_with_collisions ~dt world] advances the simulation by one time step and returns
-    collision information.
-    Similar to [step] but also returns a list of body pairs that collided during this step.
-    @param dt Time step in seconds.
-    @param world The current state of all bodies.
-    @return A tuple of (new world state, list of collision pairs). *)
+(** [step_with_collisions ~dt world] is [(world', collisions)] where [world']
+    is [world] advanced by time [dt] and [collisions] is the list of body pairs
+    that collided during this step. *)
 val step_with_collisions : dt:float -> w -> w * (Body.b * Body.b) list

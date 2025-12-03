@@ -1,47 +1,38 @@
-(** 3D vector module for physics calculations.
-    Vectors are used to represent positions, velocities, forces, and accelerations. *)
+(** 3D vector module for physics calculations. *)
 
-(** The type representing a 3D vector with x, y, z components. *)
+(** The type of a 3D vector. *)
 type v 
 
-(** [make x y z] creates a new 3D vector with components x, y, z.
-    Example: [make 1.0 2.0 3.0] creates vector (1.0, 2.0, 3.0) *)
+(** [make x y z] is a 3D vector with components [x], [y], and [z]. *)
 val make : float -> float -> float -> v
 
-(** [zer0] is the zero vector (0, 0, 0).
-    Useful as initial value for accumulating forces or as a default. *)
+(** [zer0] is the zero vector (0, 0, 0). *)
 val zer0 : v
 
-(** [x v] returns the x-component of vector [v]. *)
+(** [x v] is the x-component of [v]. *)
 val x : v -> float
 
-(** [y v] returns the y-component of vector [v]. *)
+(** [y v] is the y-component of [v]. *)
 val y : v -> float
 
-(** [z v] returns the z-component of vector [v]. *)
+(** [z v] is the z-component of [v]. *)
 val z : v -> float
 
-(** [v1 + v2] returns the vector sum of [v1] and [v2].
-    Adds corresponding components: (x1+x2, y1+y2, z1+z2) *)
+(** [v1 + v2] is the vector sum of [v1] and [v2]. *)
 val ( + ) : v -> v -> v
 
-(** [v1 - v2] returns the vector difference [v1] minus [v2].
-    Subtracts corresponding components: (x1-x2, y1-y2, z1-z2) *)
+(** [v1 - v2] is the vector difference of [v1] and [v2]. *)
 val ( - ) : v -> v -> v
 
-(** [s *~ v] returns the scalar multiplication of [s] and [v].
-    Multiplies each component by scalar: (s*x, s*y, s*z) *)
+(** [s *~ v] is the scalar product of [s] and [v]. *)
 val ( *~ ) : float -> v -> v
 
-(** [dot v1 v2] returns the dot product of [v1] and [v2].
-    Computes: x1*x2 + y1*y2 + z1*z2 *)
+(** [dot v1 v2] is the dot product of [v1] and [v2]. *)
 val dot : v -> v -> float
 
-(** [norm v] returns the magnitude (length) of vector [v].
-    Computes: sqrt(x² + y² + z²) *)
+(** [norm v] is the magnitude (Euclidean length) of [v]. *)
 val norm : v -> float
 
-(** [normalize v] returns a unit vector in the direction of [v].
-    Returns [zer0] if [v] is the zero vector to avoid division by zero.
-    Otherwise returns [v / norm v]. *)
+(** [normalize v] is a unit vector in the direction of [v].
+    If [v] is the zero vector, the result is [zer0]. *)
 val normalize : v -> v
