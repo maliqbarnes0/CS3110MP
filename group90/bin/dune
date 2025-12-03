@@ -1,4 +1,5 @@
 (executable
  (public_name group90)
  (name main)
+ (modules ui render cameracontrol simulation main)
  (libraries group90 unix raylib))
