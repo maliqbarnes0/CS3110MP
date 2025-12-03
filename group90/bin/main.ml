@@ -20,7 +20,6 @@ open Unix
 
 (* Helper to create Raylib Color *)
 let color r g b a = Color.create r g b a
-
 let black = color 0 0 0 255
 let white = color 255 255 255 255
 let red = color 255 0 0 255
@@ -28,17 +27,18 @@ let gray = color 80 80 80 255
 let dark_gray = color 40 40 40 255
 
 (* Trail configuration *)
-let max_trail_length = 120  (* Number of positions to keep in trail *)
+let max_trail_length = 120 (* Number of positions to keep in trail *)
 
 (* Trail type: list of Vec3 positions for each body *)
 type trails = Vec3.v list list
 
 (* Collision animation type *)
 type collision_animation = {
-  position: Vec3.v;
-  start_time: float;
-  duration: float;
-  max_radius: float;
+  position : Vec3.v;
+  start_time : float;
+  duration : float;
+  max_radius : float;
+  color : Color.t;
 }
 
 type collision_animations = collision_animation list
@@ -47,14 +47,20 @@ let create_system () =
   (* Masses - more similar for chaotic interactions *)
   let g = 6.67e-11 in
   (* Increased masses significantly to keep velocities lower *)
-  let mass1 = 8000. *. (1. /. g) in   (* Heavy star *)
-  let mass2 = 6000. *. (1. /. g) in   (* Medium companion *)
-  let mass3 = 4000. *. (1. /. g) in   (* Smaller interloper *)
+  let mass1 = 8000. *. (1. /. g) in
+  (* Heavy star *)
+  let mass2 = 6000. *. (1. /. g) in
+  (* Medium companion *)
+  let mass3 = 4000. *. (1. /. g) in
+  (* Smaller interloper *)
 
   (* Visual radii based on mass (cube root scaling for volume) *)
-  let radius1 = 20. *. Float.pow (mass1 /. mass1) (1. /. 3.) in  (* 20 units *)
-  let radius2 = 20. *. Float.pow (mass2 /. mass1) (1. /. 3.) in (* ~18 units *)
-  let radius3 = 20. *. Float.pow (mass3 /. mass1) (1. /. 3.) in(* ~15.7 units *)
+  let radius1 = 20. *. Float.pow (mass1 /. mass1) (1. /. 3.) in
+  (* 20 units *)
+  let radius2 = 20. *. Float.pow (mass2 /. mass1) (1. /. 3.) in
+  (* ~18 units *)
+  let radius3 = 20. *. Float.pow (mass3 /. mass1) (1. /. 3.) in
+  (* ~15.7 units *)
 
   let separation = 120. in
   (* Compact separation to keep everything visible *)
@@ -75,21 +81,21 @@ let create_system () =
   let v2 = v_rel *. mass1 /. total_mass in
 
   (* Body 1 - Heavy star orbiting in YZ plane *)
-  let density1 = mass1 /. ((4.0 /. 3.0) *. Float.pi *. radius1 ** 3.0) in
+  let density1 = mass1 /. (4.0 /. 3.0 *. Float.pi *. (radius1 ** 3.0)) in
   let body1 =
     Body.make ~density:density1
       ~pos:(Vec3.make com_x (com_y -. r1) com_z)
       ~vel:(Vec3.make 0. 0. v1) ~radius:radius1
   in
   (* Body 2 - Medium companion orbiting opposite direction *)
-  let density2 = mass2 /. ((4.0 /. 3.0) *. Float.pi *. radius2 ** 3.0) in
+  let density2 = mass2 /. (4.0 /. 3.0 *. Float.pi *. (radius2 ** 3.0)) in
   let body2 =
     Body.make ~density:density2
       ~pos:(Vec3.make com_x (com_y +. r2) com_z)
       ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:radius2
   in
   (* Body 3 - Interloper approaching at an angle with slower velocity *)
-  let density3 = mass3 /. ((4.0 /. 3.0) *. Float.pi *. radius3 ** 3.0) in
+  let density3 = mass3 /. (4.0 /. 3.0 *. Float.pi *. (radius3 ** 3.0)) in
   let body3 =
     Body.make ~density:density3
       ~pos:(Vec3.make 180. 60. 100.) (* Even closer to keep in view *)
@@ -107,7 +113,7 @@ let draw_body body body_color =
 (* Draw trail for a single body *)
 let draw_trail trail trail_color =
   let rec draw_segments = function
-    | [] | [_] -> ()
+    | [] | [ _ ] -> ()
     | p1 :: p2 :: rest ->
         let pos1 = Vector3.create (Vec3.x p1) (Vec3.y p1) (Vec3.z p1) in
         let pos2 = Vector3.create (Vec3.x p2) (Vec3.y p2) (Vec3.z p2) in
@@ -118,71 +124,81 @@ let draw_trail trail trail_color =
   in
   draw_segments trail
 
-(* Update trails with new positions, return (new_trails, collision_positions) *)
-let update_trails trails world =
-  (* If world size changed (collision occurred), rebuild trails *)
-  if List.length trails <> List.length world then
-    (* Collision detected - calculate average position of all bodies for animation *)
-    let collision_pos =
-      if List.length world > 0 then
-        let sum_pos = List.fold_left (fun acc body -> Vec3.(acc + Body.pos body)) Vec3.zer0 world in
-        Vec3.((1. /. float_of_int (List.length world)) *~ sum_pos)
-      else
-        Vec3.zer0
-    in
-    (* Create empty trails for current world *)
-    (List.map (fun body -> [Body.pos body]) world, Some collision_pos)
-  else
-    let new_trails = List.map2
-      (fun trail body ->
-        let pos = Body.pos body in
-        let new_trail = pos :: trail in
-        (* Keep only the last max_trail_length positions *)
-        if List.length new_trail > max_trail_length then
-          List.rev (List.tl (List.rev new_trail))
-        else
-          new_trail)
-      trails world
-    in
-    (new_trails, None)
+(* Calculate collision point between two bodies *)
+let calc_collision_point b1 b2 =
+  let pos1 = Body.pos b1 in
+  let pos2 = Body.pos b2 in
+  let r1 = Body.radius b1 in
+  let r2 = Body.radius b2 in
+  (* Calculate collision point: weighted by radii to be on the surface where they touch *)
+  let total_r = r1 +. r2 in
+  let weight1 = r1 /. total_r in
+  let weight2 = r2 /. total_r in
+  Vec3.((weight2 *~ pos1) + (weight1 *~ pos2))
 
-(* Draw collision animation as expanding shockwave *)
+(* Get color for a body based on index *)
+let get_body_color index =
+  let all_body_colors =
+    [ color 255 200 100 255; color 100 150 255 255; color 255 100 100 255 ]
+  in
+  List.nth all_body_colors (index mod List.length all_body_colors)
+
+(* Blend two colors together *)
+let blend_colors c1 c2 =
+  let r = (Color.r c1 + Color.r c2) / 2 in
+  let g = (Color.g c1 + Color.g c2) / 2 in
+  let b = (Color.b c1 + Color.b c2) / 2 in
+  color r g b 255
+
+(* Update trails with new positions, return (new_trails, collision_pairs) *)
+let update_trails trails world collision_pairs =
+  (* Rebuild trails when world size changes, and return collision pairs *)
+  if List.length trails <> List.length world then
+    (* Create empty trails for current world *)
+    let new_trails = List.map (fun body -> [ Body.pos body ]) world in
+    (new_trails, collision_pairs)
+  else
+    let new_trails =
+      List.map2
+        (fun trail body ->
+          let pos = Body.pos body in
+          let new_trail = pos :: trail in
+          (* Keep only the last max_trail_length positions *)
+          if List.length new_trail > max_trail_length then
+            List.rev (List.tl (List.rev new_trail))
+          else new_trail)
+        trails world
+    in
+    (new_trails, collision_pairs)
+
+(* Draw collision animation as simple expanding burst *)
 let draw_collision_animation anim current_time =
   let elapsed = current_time -. anim.start_time in
   if elapsed < anim.duration then begin
     let progress = elapsed /. anim.duration in
-    (* Fade out as animation progresses *)
+    let pos =
+      Vector3.create (Vec3.x anim.position) (Vec3.y anim.position)
+        (Vec3.z anim.position)
+    in
+
+    (* Get color components *)
+    let r = Color.r anim.color in
+    let g = Color.g anim.color in
+    let b = Color.b anim.color in
+
+    (* Single expanding sphere that fades out *)
     let alpha = int_of_float (255. *. (1. -. progress)) in
+    let radius = anim.max_radius *. progress in
 
-    (* Draw multiple expanding rings for shockwave effect *)
-    for i = 0 to 2 do
-      let offset = float_of_int i *. 0.15 in
-      let ring_progress = Float.max 0. (Float.min 1. (progress -. offset)) in
-      let ring_radius = anim.max_radius *. ring_progress in
-      let ring_alpha = int_of_float (float_of_int alpha *. (1. -. ring_progress)) in
-
-      if ring_alpha > 0 && ring_radius > 0. then begin
-        let pos = Vector3.create (Vec3.x anim.position) (Vec3.y anim.position) (Vec3.z anim.position) in
-        (* Draw expanding rings using transparent spheres *)
-        draw_sphere pos ring_radius (color 255 200 50 ring_alpha);
-        if ring_radius > 5. then
-          draw_sphere pos (ring_radius *. 0.8) (color 255 150 50 (ring_alpha / 2))
-      end
-    done;
-
-    (* Draw bright center flash that fades quickly *)
-    let flash_alpha = int_of_float (255. *. (1. -. (progress ** 0.3))) in
-    if flash_alpha > 0 then begin
-      let pos = Vector3.create (Vec3.x anim.position) (Vec3.y anim.position) (Vec3.z anim.position) in
-      draw_sphere pos (anim.max_radius *. 0.15) (color 255 255 200 flash_alpha)
-    end
+    if alpha > 0 && radius > 0. then
+      draw_sphere pos radius (color r g b alpha)
   end
 
 (* Update collision animations, removing expired ones *)
 let update_collision_animations anims current_time =
-  List.filter (fun anim ->
-    current_time -. anim.start_time < anim.duration
-  ) anims
+  List.filter
+    (fun anim -> current_time -. anim.start_time < anim.duration)
+    anims
 
 (* Draw 3D axis indicators and grid planes at origin *)
 let draw_axes () =
@@ -298,81 +314,109 @@ let update_camera camera theta phi radius =
 
   (* Zoom with mouse wheel *)
   let wheel = get_mouse_wheel_move () in
-  let new_radius = Float.max 100. (Float.min 2000. (radius -. wheel *. 50.)) in
+  let new_radius =
+    Float.max 100. (Float.min 2000. (radius -. (wheel *. 50.)))
+  in
 
   (* Convert spherical to Cartesian *)
-  let new_x = x target +. new_radius *. Float.cos new_phi *. Float.cos 
-  new_theta in
-  let new_y = y target +. new_radius *. Float.sin new_phi in
-  let new_z = z target +. new_radius *. Float.cos new_phi *. Float.sin 
-  new_theta in
+  let new_x =
+    x target +. (new_radius *. Float.cos new_phi *. Float.cos new_theta)
+  in
+  let new_y = y target +. (new_radius *. Float.sin new_phi) in
+  let new_z =
+    z target +. (new_radius *. Float.cos new_phi *. Float.sin new_theta)
+  in
 
-  let new_camera = Camera3D.create
-    (Vector3.create new_x new_y new_z)
-    target
-    (Vector3.create 0. 1. 0.)
-    70.
-    CameraProjection.Perspective
+  let new_camera =
+    Camera3D.create
+      (Vector3.create new_x new_y new_z)
+      target (Vector3.create 0. 1. 0.) 70. CameraProjection.Perspective
   in
   (new_camera, new_theta, new_phi, new_radius)
 
-let rec simulation_loop world trails time_scale paused camera theta phi radius collision_anims =
+let rec simulation_loop world trails time_scale paused camera theta phi radius
+    collision_anims =
   (* Fixed physics timestep for accuracy *)
   let fixed_dt = 0.1 in
 
   (* Check for reset *)
   let reset_world, reset_trails, reset_anims =
-    if is_key_pressed Key.R then
-      (create_system (), [[];[];[]], [])  (* Reset trails and animations *)
-    else
-      (world, trails, collision_anims)
+    if is_key_pressed Key.R then (create_system (), [ []; []; [] ], [])
+      (* Reset trails and animations *)
+    else (world, trails, collision_anims)
   in
 
   (* Update physics only if not paused, using substeps for accuracy *)
-  let new_world =
-    if paused then reset_world
+  let new_world, all_collisions =
+    if paused then (reset_world, [])
     else begin
       (* Run multiple substeps based on time_scale to maintain accuracy *)
       let num_steps = max 1 (int_of_float (Float.ceil time_scale)) in
-      let substep_dt = (time_scale *. fixed_dt) /. float_of_int num_steps in
-      let rec do_steps w n =
-        if n = 0 then w
-        else do_steps (Engine.step ~dt:substep_dt w) (n - 1)
+      let substep_dt = time_scale *. fixed_dt /. float_of_int num_steps in
+      let rec do_steps w collisions_acc n =
+        if n = 0 then (w, collisions_acc)
+        else
+          let new_w, step_collisions = Engine.step_with_collisions ~dt:substep_dt w in
+          do_steps new_w (step_collisions @ collisions_acc) (n - 1)
       in
-      do_steps reset_world num_steps
+      do_steps reset_world [] num_steps
     end
   in
 
   (* Update trails with new positions (only if not paused) *)
-  let new_trails, collision_pos_opt =
-    if paused then (reset_trails, None)
-    else update_trails reset_trails new_world
+  let new_trails, collision_pairs =
+    if paused then (reset_trails, [])
+    else update_trails reset_trails new_world all_collisions
   in
 
   (* Get current time for animations *)
   let current_time = Unix.gettimeofday () in
 
-  (* Add new collision animation if a collision occurred *)
-  let updated_anims = match collision_pos_opt with
-    | Some pos ->
-        (* Calculate animation size based on merged body *)
-        let max_radius = if List.length new_world > 0 then
-          let merged_body = List.hd new_world in
-          Body.radius merged_body *. 3.0
-        else 50.0
-        in
-        let new_anim = {
-          position = pos;
-          start_time = current_time;
-          duration = 1.5;  (* Animation lasts 1.5 seconds *)
-          max_radius = max_radius;
-        } in
-        new_anim :: reset_anims
-    | None -> reset_anims
+  (* Add new collision animations for each collision pair *)
+  let updated_anims =
+    if List.length collision_pairs > 0 then
+      (* Find body colors from old world before collision *)
+      let old_body_colors = List.mapi (fun i _ -> get_body_color i) reset_world in
+      List.fold_left
+        (fun acc (b1, b2) ->
+          let pos = calc_collision_point b1 b2 in
+          (* Calculate animation size based on the larger body *)
+          let max_radius = Float.max (Body.radius b1) (Body.radius b2) *. 4.0 in
+
+          (* Find indices of colliding bodies in old world *)
+          let idx1_opt = List.find_index (fun b -> b == b1) reset_world in
+          let idx2_opt = List.find_index (fun b -> b == b2) reset_world in
+
+          (* Get and blend colors *)
+          let explosion_color = match (idx1_opt, idx2_opt) with
+            | (Some idx1, Some idx2) ->
+                let c1 = List.nth old_body_colors idx1 in
+                let c2 = List.nth old_body_colors idx2 in
+                blend_colors c1 c2
+            | _ -> color 255 200 150 255  (* fallback color *)
+          in
+
+          let new_anim =
+            {
+              position = pos;
+              start_time = current_time;
+              duration = 1.0;
+              (* Animation lasts 1 second *)
+              max_radius;
+              color = explosion_color;
+            }
+          in
+          new_anim :: acc)
+        reset_anims
+        collision_pairs
+    else
+      reset_anims
   in
 
   (* Update existing animations (remove expired ones) *)
-  let new_collision_anims = update_collision_animations updated_anims current_time in
+  let new_collision_anims =
+    update_collision_animations updated_anims current_time
+  in
 
   (* Check for collisions in the NEW world state *)
   let collisions = Engine.find_collisions new_world in
@@ -380,7 +424,8 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius c
 
   (* Update camera *)
   let new_camera, new_theta, new_phi, new_radius =
-    update_camera camera theta phi radius in
+    update_camera camera theta phi radius
+  in
 
   (* Check for key presses to adjust simulation speed *)
   let new_time_scale, new_paused =
@@ -405,25 +450,27 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius c
     draw_axes ();
 
     (* Draw trails first (behind bodies) *)
-    let all_trail_colors = [
-      color 255 200 100 100;
-      color 100 150 255 100;
-      color 255 100 100 100;
-    ] in
-    let trail_colors = List.filteri (fun i _ -> i < List.length new_trails) all_trail_colors in
+    let all_trail_colors =
+      [ color 255 200 100 100; color 100 150 255 100; color 255 100 100 100 ]
+    in
+    let trail_colors =
+      List.filteri (fun i _ -> i < List.length new_trails) all_trail_colors
+    in
     List.iter2 draw_trail new_trails trail_colors;
 
     (* Draw the bodies as spheres *)
-    let all_body_colors = [
-      color 255 200 100 255;
-      color 100 150 255 255;
-      color 255 100 100 255;
-    ] in
-    let body_colors = List.filteri (fun i _ -> i < List.length new_world) all_body_colors in
+    let all_body_colors =
+      [ color 255 200 100 255; color 100 150 255 255; color 255 100 100 255 ]
+    in
+    let body_colors =
+      List.filteri (fun i _ -> i < List.length new_world) all_body_colors
+    in
     List.iter2 draw_body new_world body_colors;
 
     (* Draw collision animations *)
-    List.iter (fun anim -> draw_collision_animation anim current_time) new_collision_anims;
+    List.iter
+      (fun anim -> draw_collision_animation anim current_time)
+      new_collision_anims;
 
     end_mode_3d ();
 
@@ -433,7 +480,8 @@ let rec simulation_loop world trails time_scale paused camera theta phi radius c
     end_drawing ();
 
     Unix.sleepf 0.016;
-    simulation_loop new_world new_trails new_time_scale new_paused new_camera new_theta new_phi new_radius new_collision_anims
+    simulation_loop new_world new_trails new_time_scale new_paused new_camera
+      new_theta new_phi new_radius new_collision_anims
   end
 
 let () =
@@ -441,28 +489,31 @@ let () =
   set_target_fps 60;
 
   (* Setup 3D camera closer to action *)
-  let camera = Camera3D.create
-    (Vector3.create 400. 300. 400.)  (* position: closer view *)
-    (Vector3.create 0. 0. 0.)        (* target: origin *)
-    (Vector3.create 0. 1. 0.)        (* up vector *)
-    70.                               (* fov - wider to see more *)
-    CameraProjection.Perspective
+  let camera =
+    Camera3D.create
+      (Vector3.create 400. 300. 400.) (* position: closer view *)
+      (Vector3.create 0. 0. 0.) (* target: origin *)
+      (Vector3.create 0. 1. 0.) (* up vector *)
+      70. (* fov - wider to see more *)
+      CameraProjection.Perspective
   in
 
   (* Initial spherical coordinates for camera *)
-  let initial_radius = Float.sqrt (400. *. 400. +. 300. *. 300. +. 400. *. 400.) in
+  let initial_radius =
+    Float.sqrt ((400. *. 400.) +. (300. *. 300.) +. (400. *. 400.))
+  in
   let initial_theta = Float.atan2 400. 400. in
   let initial_phi = Float.asin (300. /. initial_radius) in
 
   (* Initial empty trails for 3 bodies *)
-  let initial_trails = [[];[];[]] in
+  let initial_trails = [ []; []; [] ] in
 
   (* Initial empty collision animations *)
   let initial_collision_anims = [] in
 
   (* Start with 1.0x time scale (real-time) *)
   simulation_loop (create_system ()) initial_trails 1.0 false camera
-  initial_theta initial_phi initial_radius initial_collision_anims;
+    initial_theta initial_phi initial_radius initial_collision_anims;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =
@@ -471,7 +522,8 @@ let () =
     else begin
       begin_drawing ();
       clear_background black;
-      draw_text "Simulation Closed. Press SPACE or ENTER to exit." 80 300 20 white;
+      draw_text "Simulation Closed. Press SPACE or ENTER to exit." 80 300 20
+        white;
       end_drawing ();
       Unix.sleepf 0.016;
       exit_screen ()
