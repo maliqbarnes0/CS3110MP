@@ -1,3 +1,17 @@
+(** Camera control module - manages 3D camera movement and positioning.
+
+    Implements a spherical coordinate camera system that orbits around the
+    origin:
+    - theta: Horizontal angle around the target
+    - phi: Vertical angle (clamped to prevent gimbal lock)
+    - radius: Distance from target (zoom level)
+
+    Input handling:
+    - Left mouse drag: Rotate camera (only when not over sidebar)
+    - Mouse wheel: Zoom in/out (range: 10 to 50,000 units)
+
+    Called by simulation.ml each frame to update camera based on user input. *)
+
 open Raylib
 
 (* Update camera based on input *)
