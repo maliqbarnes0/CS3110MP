@@ -37,30 +37,15 @@ let () =
   let initial_theta = Float.atan2 150. 150. in
   let initial_phi = Float.asin (100. /. initial_radius) in
 
-  (* Initial empty trails for 3 bodies *)
-  let initial_trails = [ []; []; [] ] in
+  (* Create initial simulation state using backend modules *)
+  let default_scenario = Group90.Scenario.default_scenario () in
+  let initial_state = Group90.Simulation_state.create_initial () in
+  let initial_state_with_world = Group90.Simulation_state.set_world initial_state default_scenario.bodies in
 
-  (* Initial empty collision animations *)
-  let initial_collision_anims = [] in
-
-  (* Initial parameters - using defaults calculated in create_system *)
-  (* These match the original masses: 8000/g, 6000/g, 4000/g *)
-  let initial_params =
-    [
-      (3.5747e10, 20.);
-      (* Planet 1: density, radius *)
-      (2.6810e10, 18.);
-      (* Planet 2: density, radius *)
-      (1.7873e10, 16.);
-      (* Planet 3: density, radius *)
-    ]
-  in
-
-  (* Start with 1.0x time scale (real-time) *)
+  (* Start the simulation loop *)
   Simulation.simulation_loop
-    (Simulation.create_system ())
-    initial_trails 1.0 false camera initial_theta initial_phi initial_radius
-    initial_collision_anims initial_params initial_params;
+    initial_state_with_world
+    camera initial_theta initial_phi initial_radius;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =

@@ -81,7 +81,7 @@ let check_slider_drag x y width min_val max_val =
     None
 
 (* Draw 2D UI overlay with sidebar *)
-let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_planets =
+let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_planets current_scenario =
   (* Sidebar panel - right side *)
   let sidebar_x = 600 in
   let sidebar_y = 0 in
@@ -131,22 +131,41 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
       draw_line (sidebar_x + 10) (base_y + 130) (sidebar_x + sidebar_width - 10) (base_y + 130) (color 50 60 80 255)
   ) planet_colors;
 
+  (* Scenario info *)
+  draw_line (sidebar_x + 10) 470 (sidebar_x + sidebar_width - 10) 470 (color 50 60 80 255);
+  draw_text "SCENARIO" (sidebar_x + 15) 478 11 (color 150 180 255 255);
+  (* Truncate scenario name if too long *)
+  let scenario_display = if String.length current_scenario > 18 then
+    String.sub current_scenario 0 15 ^ "..."
+  else
+    current_scenario
+  in
+  draw_text scenario_display (sidebar_x + 15) 493 10 white;
+  draw_text "[1-5] Switch scenario" (sidebar_x + 15) 507 10 (color 180 180 200 255);
+  draw_text "[R] Reset scenario" (sidebar_x + 15) 520 10 (color 180 180 200 255);
+
   (* Bottom controls *)
-  draw_text (Printf.sprintf "Speed: %.1fx" time_scale) (sidebar_x + 15) 500 12 white;
-  draw_text "[Z] Faster  [X] Slower" (sidebar_x + 15) 518 10 (color 180 180 200 255);
-  draw_text (if paused then "[P] Resume" else "[P] Pause") (sidebar_x + 15) 535 11 (color 180 180 200 255);
-  draw_line (sidebar_x + 10) 550 (sidebar_x + sidebar_width - 10) 550 (color 50 60 80 255);
-  draw_text "[F] Restart sim" (sidebar_x + 15) 558 11 (color 180 180 200 255);
-  draw_text "[R] Reset to defaults" (sidebar_x + 15) 576 11 (color 180 180 200 255);
+  draw_line (sidebar_x + 10) 535 (sidebar_x + sidebar_width - 10) 535 (color 50 60 80 255);
+  draw_text (Printf.sprintf "Speed: %.1fx" time_scale) (sidebar_x + 15) 543 12 white;
+  draw_text "[Z] Faster  [X] Slower" (sidebar_x + 15) 560 10 (color 180 180 200 255);
+  draw_text (if paused then "[P] Resume" else "[P] Pause") (sidebar_x + 15) 576 11 (color 180 180 200 255);
+
+  (* Scenario list - bottom left *)
+  draw_text "SCENARIOS" 15 380 11 (color 150 180 255 255);
+  draw_text "[1] Three-Body" 15 398 9 (color 180 180 200 255);
+  draw_text "[2] Binary Star" 15 412 9 (color 180 180 200 255);
+  draw_text "[3] Solar System" 15 426 9 (color 180 180 200 255);
+  draw_text "[4] Collision" 15 440 9 (color 180 180 200 255);
+  draw_text "[5] Figure-8" 15 454 9 (color 180 180 200 255);
 
   (* Camera controls - bottom left *)
-  draw_text "CAMERA" 15 510 11 (color 150 180 255 255);
-  draw_text "Rotate: Drag" 15 528 10 (color 180 180 200 255);
-  draw_text "Zoom: Wheel" 15 543 10 (color 180 180 200 255);
+  draw_text "CAMERA" 15 480 11 (color 150 180 255 255);
+  draw_text "Rotate: Drag" 15 498 10 (color 180 180 200 255);
+  draw_text "Zoom: Wheel" 15 513 10 (color 180 180 200 255);
 
   (* Exit button - moved to left *)
-  draw_rectangle 10 560 80 30 (color 180 50 50 255);
-  draw_text "EXIT" 25 570 20 white;
+  draw_rectangle 10 540 80 30 (color 180 50 50 255);
+  draw_text "EXIT" 25 550 20 white;
 
   (* Draw collision warning *)
   if is_colliding then begin
@@ -159,8 +178,8 @@ let check_exit_button () =
   if is_mouse_button_pressed MouseButton.Left then
     let mouse_x = get_mouse_x () in
     let mouse_y = get_mouse_y () in
-    (* Y coordinate: button is at y=560-590 from top *)
-    mouse_x >= 10 && mouse_x <= 90 && mouse_y >= 560 && mouse_y <= 590
+    (* Y coordinate: button is at y=540-570 from top *)
+    mouse_x >= 10 && mouse_x <= 90 && mouse_y >= 540 && mouse_y <= 570
   else false
 
 (* Check if mouse is over sidebar *)
