@@ -2,7 +2,7 @@ open Raylib
 open Group90
 
 (* Render scale: physics coordinates to visual coordinates *)
-let render_scale = 0.1  (* 1 physics unit = 0.1 render units *)
+let render_scale = 0.1 (* 1 physics unit = 0.1 render units *)
 
 (* Trail configuration *)
 let max_trail_length = 120 (* Number of positions to keep in trail *)
@@ -26,36 +26,38 @@ let stars = ref []
 
 let initialize_stars () =
   Random.self_init ();
-  stars := List.init 400 (fun _ ->
-    let theta = Random.float (2. *. Float.pi) in
-    let phi = Random.float Float.pi -. (Float.pi /. 2.) in
-    (* Stars between 800 and 1200 units away *)
-    let radius = 800. +. Random.float 400. in
+  stars :=
+    List.init 400 (fun _ ->
+        let theta = Random.float (2. *. Float.pi) in
+        let phi = Random.float Float.pi -. (Float.pi /. 2.) in
+        (* Stars between 800 and 1200 units away *)
+        let radius = 800. +. Random.float 400. in
 
-    let x = radius *. Float.cos phi *. Float.cos theta in
-    let y = radius *. Float.sin phi in
-    let z = radius *. Float.cos phi *. Float.sin theta in
+        let x = radius *. Float.cos phi *. Float.cos theta in
+        let y = radius *. Float.sin phi in
+        let z = radius *. Float.cos phi *. Float.sin theta in
 
-    let brightness = 200 + Random.int 56 in
-    let size = 1.5 +. Random.float 2.0 in
+        let brightness = 200 + Random.int 56 in
+        let size = 1.5 +. Random.float 2.0 in
 
-    (x, y, z, brightness, size)
-  )
+        (x, y, z, brightness, size))
 
 let draw_starbox camera =
   let cam_pos = Camera3D.position camera in
 
   (* Draw the starbox - stars follow camera *)
-  List.iter (fun (x, y, z, brightness, size) ->
-    let star_pos = Vector3.create
-      (Vector3.x cam_pos +. x)
-      (Vector3.y cam_pos +. y)
-      (Vector3.z cam_pos +. z)
-    in
+  List.iter
+    (fun (x, y, z, brightness, size) ->
+      let star_pos =
+        Vector3.create
+          (Vector3.x cam_pos +. x)
+          (Vector3.y cam_pos +. y)
+          (Vector3.z cam_pos +. z)
+      in
 
-    let star_color = Ui.color brightness brightness 255 255 in
-    draw_sphere star_pos size star_color
-  ) !stars
+      let star_color = Ui.color brightness brightness 255 255 in
+      draw_sphere star_pos size star_color)
+    !stars
 
 let draw_infinite_grid camera =
   let cam_pos = Camera3D.position camera in
@@ -79,16 +81,26 @@ let draw_infinite_grid camera =
     if alpha > 5 then begin
       let grid_color = Ui.color 30 30 50 alpha in
 
-      let start_x = Vector3.create
-        (grid_center_x -. visible_range) 0. (grid_center_z +. offset) in
-      let end_x = Vector3.create
-        (grid_center_x +. visible_range) 0. (grid_center_z +. offset) in
+      let start_x =
+        Vector3.create
+          (grid_center_x -. visible_range)
+          0. (grid_center_z +. offset)
+      in
+      let end_x =
+        Vector3.create
+          (grid_center_x +. visible_range)
+          0. (grid_center_z +. offset)
+      in
       draw_line_3d start_x end_x grid_color;
 
-      let start_z = Vector3.create
-        (grid_center_x +. offset) 0. (grid_center_z -. visible_range) in
-      let end_z = Vector3.create
-        (grid_center_x +. offset) 0. (grid_center_z +. visible_range) in
+      let start_z =
+        Vector3.create (grid_center_x +. offset) 0.
+          (grid_center_z -. visible_range)
+      in
+      let end_z =
+        Vector3.create (grid_center_x +. offset) 0.
+          (grid_center_z +. visible_range)
+      in
       draw_line_3d start_z end_z grid_color
     end
   done
@@ -96,10 +108,12 @@ let draw_infinite_grid camera =
 let draw_body body body_color =
   let pos = Body.pos body in
   let radius = Body.radius body *. render_scale in
-  let position = Vector3.create
-    (render_scale *. Vec3.x pos)
-    (render_scale *. Vec3.y pos)
-    (render_scale *. Vec3.z pos) in
+  let position =
+    Vector3.create
+      (render_scale *. Vec3.x pos)
+      (render_scale *. Vec3.y pos)
+      (render_scale *. Vec3.z pos)
+  in
   draw_sphere position radius body_color
 
 (* Draw trail for a single body *)
@@ -107,14 +121,18 @@ let draw_trail trail trail_color =
   let rec draw_segments = function
     | [] | [ _ ] -> ()
     | p1 :: p2 :: rest ->
-        let pos1 = Vector3.create
-          (render_scale *. Vec3.x p1)
-          (render_scale *. Vec3.y p1)
-          (render_scale *. Vec3.z p1) in
-        let pos2 = Vector3.create
-          (render_scale *. Vec3.x p2)
-          (render_scale *. Vec3.y p2)
-          (render_scale *. Vec3.z p2) in
+        let pos1 =
+          Vector3.create
+            (render_scale *. Vec3.x p1)
+            (render_scale *. Vec3.y p1)
+            (render_scale *. Vec3.z p1)
+        in
+        let pos2 =
+          Vector3.create
+            (render_scale *. Vec3.x p2)
+            (render_scale *. Vec3.y p2)
+            (render_scale *. Vec3.z p2)
+        in
         (* Draw thicker lines by drawing small spheres at each position *)
         draw_sphere pos1 (1.5 *. render_scale) trail_color;
         draw_line_3d pos1 pos2 trail_color;
@@ -243,7 +261,8 @@ let calc_collision_point b1 b2 =
   let pos2 = Body.pos b2 in
   let r1 = Body.radius b1 in
   let r2 = Body.radius b2 in
-  (* Calculate collision point: weighted by radii to be on the surface where they touch *)
+  (* Calculate collision point: weighted by radii to be on the surface where
+     they touch *)
   let total_r = r1 +. r2 in
   let weight1 = r1 /. total_r in
   let weight2 = r2 /. total_r in

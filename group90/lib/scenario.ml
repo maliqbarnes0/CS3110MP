@@ -1,9 +1,7 @@
-(**
-   Scenario module - handles creation of different physics scenarios.
+(** Scenario module - handles creation of different physics scenarios.
 
-   This module provides functions for creating various celestial body
-   configurations for simulation.
-*)
+    This module provides functions for creating various celestial body
+    configurations for simulation. *)
 
 type scenario = {
   name : string;
@@ -17,11 +15,11 @@ let g = 6.67e-11
 
 (** Calculate mass from density and radius *)
 let calculate_mass ~density ~radius =
-  let volume = (4.0 /. 3.0) *. Float.pi *. (radius ** 3.0) in
+  let volume = 4.0 /. 3.0 *. Float.pi *. (radius ** 3.0) in
   density *. volume
 
-(** Create a three-body orbital system with custom parameters.
-    Parameters: (density1, radius1, density2, radius2, density3, radius3) *)
+(** Create a three-body orbital system with custom parameters. Parameters:
+    (density1, radius1, density2, radius2, density3, radius3) *)
 let create_three_body_system ?(custom_params = None) () =
   (* Default densities and radii - deterministic *)
   let default_density1 = 3.5747e10 in
@@ -32,9 +30,16 @@ let create_three_body_system ?(custom_params = None) () =
   let default_radius3 = 16. in
 
   (* Use custom params if provided, otherwise use defaults *)
-  let (density1, radius1, density2, radius2, density3, radius3) = match custom_params with
+  let density1, radius1, density2, radius2, density3, radius3 =
+    match custom_params with
     | Some params -> params
-    | None -> (default_density1, default_radius1, default_density2, default_radius2, default_density3, default_radius3)
+    | None ->
+        ( default_density1,
+          default_radius1,
+          default_density2,
+          default_radius2,
+          default_density3,
+          default_radius3 )
   in
 
   (* Calculate masses from density and radius *)
@@ -64,20 +69,17 @@ let create_three_body_system ?(custom_params = None) () =
   let body1 =
     Body.make ~density:density1
       ~pos:(Vec3.make com_x (com_y -. r1) com_z)
-      ~vel:(Vec3.make 0. 0. v1)
-      ~radius:radius1
+      ~vel:(Vec3.make 0. 0. v1) ~radius:radius1
   in
   (* Body 2 - Medium companion orbiting opposite direction *)
   let body2 =
     Body.make ~density:density2
       ~pos:(Vec3.make com_x (com_y +. r2) com_z)
-      ~vel:(Vec3.make 0. 0. (-.v2))
-      ~radius:radius2
+      ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:radius2
   in
   (* Body 3 - Interloper approaching at an angle *)
   let body3 =
-    Body.make ~density:density3
-      ~pos:(Vec3.make 180. 60. 100.)
+    Body.make ~density:density3 ~pos:(Vec3.make 180. 60. 100.)
       ~vel:(Vec3.make (-1.0) (-0.4) (-0.6))
       ~radius:radius3
   in
@@ -85,23 +87,35 @@ let create_three_body_system ?(custom_params = None) () =
 
 (** Create randomized three-body system *)
 let create_randomized_three_body () =
-  let rand_range min max = min +. (Random.float (max -. min)) in
+  let rand_range min max = min +. Random.float (max -. min) in
 
   let base_mass = 7000. /. g in
   let mass_variation = 0.3 in
-  let mass1 = base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation) in
-  let mass2 = base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation) in
-  let mass3 = base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation) in
+  let mass1 =
+    base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation)
+  in
+  let mass2 =
+    base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation)
+  in
+  let mass3 =
+    base_mass *. rand_range (1. -. mass_variation) (1. +. mass_variation)
+  in
 
   let base_radius = 18. in
   let radius_variation = 0.2 in
-  let radius1 = base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation) in
-  let radius2 = base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation) in
-  let radius3 = base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation) in
+  let radius1 =
+    base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation)
+  in
+  let radius2 =
+    base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation)
+  in
+  let radius3 =
+    base_radius *. rand_range (1. -. radius_variation) (1. +. radius_variation)
+  in
 
-  let volume1 = (4.0 /. 3.0) *. Float.pi *. (radius1 ** 3.0) in
-  let volume2 = (4.0 /. 3.0) *. Float.pi *. (radius2 ** 3.0) in
-  let volume3 = (4.0 /. 3.0) *. Float.pi *. (radius3 ** 3.0) in
+  let volume1 = 4.0 /. 3.0 *. Float.pi *. (radius1 ** 3.0) in
+  let volume2 = 4.0 /. 3.0 *. Float.pi *. (radius2 ** 3.0) in
+  let volume3 = 4.0 /. 3.0 *. Float.pi *. (radius3 ** 3.0) in
   let density1 = mass1 /. volume1 in
   let density2 = mass2 /. volume2 in
   let density3 = mass3 /. volume3 in
@@ -118,36 +132,43 @@ let create_randomized_three_body () =
   let offset_z3 = rand_range (-20.) 20. in
 
   let speed_range_max = 6.0 in
-  let vel1_x = rand_range (-. speed_range_max) speed_range_max in
-  let vel1_y = rand_range (-. speed_range_max) speed_range_max in
-  let vel1_z = rand_range (-. speed_range_max) speed_range_max in
-  let vel2_x = rand_range (-. speed_range_max) speed_range_max in
-  let vel2_y = rand_range (-. speed_range_max) speed_range_max in
-  let vel2_z = rand_range (-. speed_range_max) speed_range_max in
-  let vel3_x = rand_range (-. speed_range_max) speed_range_max in
-  let vel3_y = rand_range (-. speed_range_max) speed_range_max in
-  let vel3_z = rand_range (-. speed_range_max) speed_range_max in
+  let vel1_x = rand_range (-.speed_range_max) speed_range_max in
+  let vel1_y = rand_range (-.speed_range_max) speed_range_max in
+  let vel1_z = rand_range (-.speed_range_max) speed_range_max in
+  let vel2_x = rand_range (-.speed_range_max) speed_range_max in
+  let vel2_y = rand_range (-.speed_range_max) speed_range_max in
+  let vel2_z = rand_range (-.speed_range_max) speed_range_max in
+  let vel3_x = rand_range (-.speed_range_max) speed_range_max in
+  let vel3_y = rand_range (-.speed_range_max) speed_range_max in
+  let vel3_z = rand_range (-.speed_range_max) speed_range_max in
 
   let r1 = separation *. mass2 /. (mass1 +. mass2) in
   let r2 = separation *. mass1 /. (mass1 +. mass2) in
 
-  let body1 = Body.make ~density:density1
-    ~pos:(Vec3.make offset_x1 (-.r1 +. offset_y1) offset_z1)
-    ~vel:(Vec3.make vel1_x vel1_y vel1_z)
-    ~radius:radius1 in
-  let body2 = Body.make ~density:density2
-    ~pos:(Vec3.make offset_x2 (r2 +. offset_y2) offset_z2)
-    ~vel:(Vec3.make vel2_x vel2_y vel2_z)
-    ~radius:radius2 in
+  let body1 =
+    Body.make ~density:density1
+      ~pos:(Vec3.make offset_x1 (-.r1 +. offset_y1) offset_z1)
+      ~vel:(Vec3.make vel1_x vel1_y vel1_z)
+      ~radius:radius1
+  in
+  let body2 =
+    Body.make ~density:density2
+      ~pos:(Vec3.make offset_x2 (r2 +. offset_y2) offset_z2)
+      ~vel:(Vec3.make vel2_x vel2_y vel2_z)
+      ~radius:radius2
+  in
   let third_body_distance = rand_range 180. 240. in
   let third_body_angle = rand_range 0. (2. *. Float.pi) in
-  let body3 = Body.make ~density:density3
-    ~pos:(Vec3.make
-      (third_body_distance *. Float.cos third_body_angle +. offset_x3)
-      (rand_range 40. 80. +. offset_y3)
-      (third_body_distance *. Float.sin third_body_angle +. offset_z3))
-    ~vel:(Vec3.make vel3_x vel3_y vel3_z)
-    ~radius:radius3 in
+  let body3 =
+    Body.make ~density:density3
+      ~pos:
+        (Vec3.make
+           ((third_body_distance *. Float.cos third_body_angle) +. offset_x3)
+           (rand_range 40. 80. +. offset_y3)
+           ((third_body_distance *. Float.sin third_body_angle) +. offset_z3))
+      ~vel:(Vec3.make vel3_x vel3_y vel3_z)
+      ~radius:radius3
+  in
   [ body1; body2; body3 ]
 
 (** Randomized three-body scenario *)
@@ -165,19 +186,23 @@ let default_scenario () =
     name = "Three-Body Problem";
     description = "A binary star system with an interloping third body";
     bodies = create_three_body_system ();
-    recommended_camera = (0.0, 0.0, 400.0); (* theta, phi, radius *)
+    recommended_camera = (0.0, 0.0, 400.0);
+    (* theta, phi, radius *)
   }
 
 (** Create a scenario from custom planet parameters *)
 let scenario_from_params params_list =
-  let (d1, r1, d2, r2, d3, r3) = match params_list with
+  let d1, r1, d2, r2, d3, r3 =
+    match params_list with
     | (d1, r1) :: (d2, r2) :: (d3, r3) :: _ -> (d1, r1, d2, r2, d3, r3)
-    | _ -> (3.5747e10, 20., 2.6810e10, 18., 1.7873e10, 16.) (* fallback *)
+    | _ -> (3.5747e10, 20., 2.6810e10, 18., 1.7873e10, 16.)
+    (* fallback *)
   in
   {
     name = "Custom Three-Body System";
     description = "User-configured three-body system";
-    bodies = create_three_body_system ~custom_params:(Some (d1, r1, d2, r2, d3, r3)) ();
+    bodies =
+      create_three_body_system ~custom_params:(Some (d1, r1, d2, r2, d3, r3)) ();
     recommended_camera = (0.0, 0.0, 400.0);
   }
 
@@ -199,17 +224,19 @@ let binary_star_scenario () =
   let v1 = v_rel *. mass2 /. total_mass in
   let v2 = v_rel *. mass1 /. total_mass in
 
-  let star1 = Body.make ~density:star_density
-    ~pos:(Vec3.make 0. (-. r1) 0.)
-    ~vel:(Vec3.make v1 0. 0.) ~radius:star1_radius in
-  let star2 = Body.make ~density:star_density
-    ~pos:(Vec3.make 0. r2 0.)
-    ~vel:(Vec3.make (-. v2) 0. 0.) ~radius:star2_radius in
+  let star1 =
+    Body.make ~density:star_density ~pos:(Vec3.make 0. (-.r1) 0.)
+      ~vel:(Vec3.make v1 0. 0.) ~radius:star1_radius
+  in
+  let star2 =
+    Body.make ~density:star_density ~pos:(Vec3.make 0. r2 0.)
+      ~vel:(Vec3.make (-.v2) 0. 0.) ~radius:star2_radius
+  in
 
   {
     name = "Binary Star";
     description = "Two stars in stable circular orbit";
-    bodies = [star1; star2];
+    bodies = [ star1; star2 ];
     recommended_camera = (0.0, 0.0, 400.0);
   }
 
@@ -217,9 +244,10 @@ let binary_star_scenario () =
 let solar_system_scenario () =
   let sun_density = 8e10 in
   let sun_radius = 30. in
-  let sun = Body.make ~density:sun_density
-    ~pos:(Vec3.make 0. 0. 0.)
-    ~vel:(Vec3.make 0. 0. 0.) ~radius:sun_radius in
+  let sun =
+    Body.make ~density:sun_density ~pos:(Vec3.make 0. 0. 0.)
+      ~vel:(Vec3.make 0. 0. 0.) ~radius:sun_radius
+  in
 
   let sun_mass = calculate_mass ~density:sun_density ~radius:sun_radius in
 
@@ -228,23 +256,26 @@ let solar_system_scenario () =
   let planet1_density = 2e10 in
   let orbit1 = 100. in
   let v1 = Float.sqrt (g *. sun_mass /. orbit1) in
-  let planet1 = Body.make ~density:planet1_density
-    ~pos:(Vec3.make orbit1 0. 0.)
-    ~vel:(Vec3.make 0. 0. v1) ~radius:planet1_radius in
+  let planet1 =
+    Body.make ~density:planet1_density ~pos:(Vec3.make orbit1 0. 0.)
+      ~vel:(Vec3.make 0. 0. v1) ~radius:planet1_radius
+  in
 
   (* Outer planet *)
   let planet2_radius = 15. in
   let planet2_density = 1.8e10 in
   let orbit2 = 180. in
   let v2 = Float.sqrt (g *. sun_mass /. orbit2) in
-  let planet2 = Body.make ~density:planet2_density
-    ~pos:(Vec3.make (-. orbit2) 0. 0.)
-    ~vel:(Vec3.make 0. 0. (-. v2)) ~radius:planet2_radius in
+  let planet2 =
+    Body.make ~density:planet2_density
+      ~pos:(Vec3.make (-.orbit2) 0. 0.)
+      ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:planet2_radius
+  in
 
   {
     name = "Solar System";
     description = "Central star with two orbiting planets";
-    bodies = [sun; planet1; planet2];
+    bodies = [ sun; planet1; planet2 ];
     recommended_camera = (0.0, 0.0, 450.0);
   }
 
@@ -255,17 +286,19 @@ let collision_scenario () =
   let body2_density = 3.5e10 in
   let body2_radius = 20. in
 
-  let body1 = Body.make ~density:body1_density
-    ~pos:(Vec3.make (-150.) 0. 0.)
-    ~vel:(Vec3.make 2.0 0. 0.) ~radius:body1_radius in
-  let body2 = Body.make ~density:body2_density
-    ~pos:(Vec3.make 150. 0. 0.)
-    ~vel:(Vec3.make (-2.0) 0. 0.) ~radius:body2_radius in
+  let body1 =
+    Body.make ~density:body1_density ~pos:(Vec3.make (-150.) 0. 0.)
+      ~vel:(Vec3.make 2.0 0. 0.) ~radius:body1_radius
+  in
+  let body2 =
+    Body.make ~density:body2_density ~pos:(Vec3.make 150. 0. 0.)
+      ~vel:(Vec3.make (-2.0) 0. 0.) ~radius:body2_radius
+  in
 
   {
     name = "Collision Course";
     description = "Two bodies on collision trajectory";
-    bodies = [body1; body2];
+    bodies = [ body1; body2 ];
     recommended_camera = (0.0, 0.0, 400.0);
   }
 
@@ -275,20 +308,26 @@ let figure_eight_scenario () =
   let body_radius = 18. in
 
   (* Figure-8 requires very specific initial conditions *)
-  let body1 = Body.make ~density:body_density
-    ~pos:(Vec3.make 97.0 (-24.3) 0.)
-    ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius in
-  let body2 = Body.make ~density:body_density
-    ~pos:(Vec3.make (-97.0) 24.3 0.)
-    ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius in
-  let body3 = Body.make ~density:body_density
-    ~pos:(Vec3.make 0. 0. 0.)
-    ~vel:(Vec3.make (-0.932) (-0.866) 0.) ~radius:body_radius in
+  let body1 =
+    Body.make ~density:body_density
+      ~pos:(Vec3.make 97.0 (-24.3) 0.)
+      ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius
+  in
+  let body2 =
+    Body.make ~density:body_density
+      ~pos:(Vec3.make (-97.0) 24.3 0.)
+      ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius
+  in
+  let body3 =
+    Body.make ~density:body_density ~pos:(Vec3.make 0. 0. 0.)
+      ~vel:(Vec3.make (-0.932) (-0.866) 0.)
+      ~radius:body_radius
+  in
 
   {
     name = "Figure-8 Orbit";
     description = "Chaotic three-body figure-8 configuration";
-    bodies = [body1; body2; body3];
+    bodies = [ body1; body2; body3 ];
     recommended_camera = (0.0, 0.0, 400.0);
   }
 
@@ -303,11 +342,12 @@ let get_scenario_by_name name =
   | "Three-Body Problem" | _ -> default_scenario ()
 
 (** List of all available scenarios *)
-let all_scenarios = [
-  "Three-Body Problem";
-  "Randomized 3-Body";
-  "Binary Star";
-  "Solar System";
-  "Collision Course";
-  "Figure-8 Orbit";
-]
+let all_scenarios =
+  [
+    "Three-Body Problem";
+    "Randomized 3-Body";
+    "Binary Star";
+    "Solar System";
+    "Collision Course";
+    "Figure-8 Orbit";
+  ]
