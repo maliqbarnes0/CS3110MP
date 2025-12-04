@@ -96,11 +96,7 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
   draw_text "CONTROL PANEL" (sidebar_x + 15) 15 14 (color 150 180 255 255);
   draw_line (sidebar_x + 10) 35 (sidebar_x + sidebar_width - 10) 35 (color 80 100 140 255);
 
-  (* Change notification *)
-  if has_changes then begin
-    draw_text "(Changes applied" (sidebar_x + 20) 45 10 (color 100 255 100 255);
-    draw_text " live - F to restart)" (sidebar_x + 20) 57 10 (color 100 255 100 255)
-  end;
+  (* No change notification needed - changes are always live *)
 
   (* Planet controls - always show all 3 *)
   let planet_colors = [
@@ -141,8 +137,8 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
     current_scenario
   in
   draw_text scenario_display (sidebar_x + 15) 493 10 white;
-  draw_text "[1-5] Switch scenario" (sidebar_x + 15) 507 10 (color 180 180 200 255);
-  draw_text "[R] Reset scenario" (sidebar_x + 15) 520 10 (color 180 180 200 255);
+  draw_text "[1-6] Switch scenario" (sidebar_x + 15) 507 10 (color 180 180 200 255);
+  draw_text "[R] Restart w/ sliders" (sidebar_x + 15) 520 10 (color 180 180 200 255);
 
   (* Bottom controls *)
   draw_line (sidebar_x + 10) 535 (sidebar_x + sidebar_width - 10) 535 (color 50 60 80 255);
@@ -151,12 +147,13 @@ let draw_ui is_colliding time_scale paused planet_params has_changes num_alive_p
   draw_text (if paused then "[P] Resume" else "[P] Pause") (sidebar_x + 15) 576 11 (color 180 180 200 255);
 
   (* Scenario list - bottom left *)
-  draw_text "SCENARIOS" 15 380 11 (color 150 180 255 255);
-  draw_text "[1] Three-Body" 15 398 9 (color 180 180 200 255);
-  draw_text "[2] Binary Star" 15 412 9 (color 180 180 200 255);
-  draw_text "[3] Solar System" 15 426 9 (color 180 180 200 255);
-  draw_text "[4] Collision" 15 440 9 (color 180 180 200 255);
-  draw_text "[5] Figure-8" 15 454 9 (color 180 180 200 255);
+  draw_text "SCENARIOS" 15 360 11 (color 150 180 255 255);
+  draw_text "[1] Three-Body" 15 378 9 (color 180 180 200 255);
+  draw_text "[2] Randomized 3-Body" 15 392 8 (color 180 180 200 255);
+  draw_text "[3] Binary Star" 15 406 9 (color 180 180 200 255);
+  draw_text "[4] Solar System" 15 420 9 (color 180 180 200 255);
+  draw_text "[5] Collision" 15 434 9 (color 180 180 200 255);
+  draw_text "[6] Figure-8" 15 448 9 (color 180 180 200 255);
 
   (* Camera controls - bottom left *)
   draw_text "CAMERA" 15 480 11 (color 150 180 255 255);

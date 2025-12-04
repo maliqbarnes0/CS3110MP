@@ -80,7 +80,7 @@ and handle_slider_input state =
 
 (** Handle keyboard input for simulation control *)
 and handle_keyboard_input state =
-  (* Check for scenario switching (1-5 keys) *)
+  (* Check for scenario switching (1-6 keys) *)
   let state_after_scenario =
     if is_key_pressed Key.One then
       load_scenario_by_index state 0
@@ -92,31 +92,25 @@ and handle_keyboard_input state =
       load_scenario_by_index state 3
     else if is_key_pressed Key.Five then
       load_scenario_by_index state 4
+    else if is_key_pressed Key.Six then
+      load_scenario_by_index state 5
     else
       state
   in
 
-  (* Check for apply (A key) - create new scenario with current params *)
-  let state_after_apply =
-    if is_key_pressed Key.A then begin
+  (* Check for reset (R key) - reset scenario with current slider values *)
+  let state_after_reset =
+    if is_key_pressed Key.R then begin
+      (* Use current pending_params (slider values) to create new bodies *)
       let new_bodies = Scenario.create_three_body_system
         ~custom_params:(Some (extract_params_tuple state_after_scenario.Simulation_state.pending_params)) () in
       let state_with_bodies = Simulation_state.set_world state_after_scenario new_bodies in
       let state_with_trails = Simulation_state.set_trails state_with_bodies [] in
       let state_with_anims = Simulation_state.set_collision_anims state_with_trails [] in
+      (* Mark current params as applied *)
       Simulation_state.apply_params state_with_anims
     end else
       state_after_scenario
-  in
-
-  (* Check for reset (R key) - reset to current scenario *)
-  let state_after_reset =
-    if is_key_pressed Key.R then begin
-      let scenario = Scenario.get_scenario_by_name state_after_apply.current_scenario in
-      let state_loaded = Simulation_state.load_scenario state_after_apply scenario.name in
-      Simulation_state.set_world state_loaded scenario.bodies
-    end else
-      state_after_apply
   in
 
   (* Check for time scale adjustments (Z and X keys) *)
