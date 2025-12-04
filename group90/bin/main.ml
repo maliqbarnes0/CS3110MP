@@ -40,12 +40,13 @@ let () =
   (* Create initial simulation state using backend modules *)
   let default_scenario = Group90.Scenario.default_scenario () in
   let initial_state = Group90.Simulation_state.create_initial () in
-  let initial_state_with_world = Group90.Simulation_state.set_world initial_state default_scenario.bodies in
+  let initial_state_with_world =
+    Group90.Simulation_state.set_world initial_state default_scenario.bodies
+  in
 
   (* Start the simulation loop *)
-  Simulation.simulation_loop
-    initial_state_with_world
-    camera initial_theta initial_phi initial_radius;
+  Simulation.simulation_loop initial_state_with_world camera initial_theta
+    initial_phi initial_radius;
 
   (* Exit screen - keep drawing until user presses a key *)
   let rec exit_screen () =

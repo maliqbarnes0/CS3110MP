@@ -2,36 +2,31 @@ let g = 6.67e-11
 
 type w = Body.b list
 
-
-let merge b1 b2 = 
-  let m1 = Body.mass b1 in 
+let merge b1 b2 =
+  let m1 = Body.mass b1 in
   let m2 = Body.mass b2 in
-  let m = m1 +. m2 in 
+  let m = m1 +. m2 in
 
-  let pos1 = Body.pos b1 in 
-  let pos2 = Body.pos b2 in 
+  let pos1 = Body.pos b1 in
+  let pos2 = Body.pos b2 in
 
-(*Center of mass*)
-  let pos = Vec3.( 
-    (1. /. m) *~ ((m1 *~ pos1) + (m2 *~ pos2))) 
-  in
-(*new velocity, perfectly inelastic collision (momentum)*)
-let v1 = Body.vel b1 in
-let v2 = Body.vel b2 in
-let vel = Vec3.(
-  (1. /. m) *~ ((m1 *~ v1) + (m2 *~ v2)))
-in
-let rho1 = Body.density b1 in
-let rho2 = Body.density b2 in
-let volume1 = m1 /. rho1 in
-let volume2 = m2 /. rho2 in
-let v = volume1 +. volume2 in
+  (*Center of mass*)
+  let pos = Vec3.(1. /. m *~ ((m1 *~ pos1) + (m2 *~ pos2))) in
+  (*new velocity, perfectly inelastic collision (momentum)*)
+  let v1 = Body.vel b1 in
+  let v2 = Body.vel b2 in
+  let vel = Vec3.(1. /. m *~ ((m1 *~ v1) + (m2 *~ v2))) in
+  let rho1 = Body.density b1 in
+  let rho2 = Body.density b2 in
+  let volume1 = m1 /. rho1 in
+  let volume2 = m2 /. rho2 in
+  let v = volume1 +. volume2 in
 
-let density = m /. v in
-let radius = ((3. *. v) /. (4. *. Float.pi)) ** (1. /. 3.) in
+  let density = m /. v in
+  let radius = (3. *. v /. (4. *. Float.pi)) ** (1. /. 3.) in
 
-(*creating new merged body*)
-Body.make ~density ~pos ~vel ~radius 
+  (*creating new merged body*)
+  Body.make ~density ~pos ~vel ~radius
 
 let check_collision b1 b2 =
   let sum_of_radii = Body.radius b1 +. Body.radius b2 in
@@ -58,8 +53,7 @@ let resolve_collisions world =
       (fun (merged_acc, remove_acc) (b1, b2) ->
         let merged_body = merge b1 b2 in
         (merged_body :: merged_acc, b1 :: b2 :: remove_acc))
-      ([], [])
-      collisions
+      ([], []) collisions
   in
   let remaining = List.filter (fun b -> not (List.mem b to_remove)) world in
 
@@ -73,8 +67,7 @@ let resolve_collisions_with_info world =
       (fun (merged_acc, remove_acc) (b1, b2) ->
         let merged_body = merge b1 b2 in
         (merged_body :: merged_acc, b1 :: b2 :: remove_acc))
-      ([], [])
-      collisions
+      ([], []) collisions
   in
   let remaining = List.filter (fun b -> not (List.mem b to_remove)) world in
 
@@ -100,25 +93,29 @@ let net_force_on b1 world =
     Vec3.zer0 world
 
 let step ~dt world =
-  let update = List.map
-    (fun b ->
-      let f = net_force_on b world in
-      let a = Vec3.(1. /. Body.mass b *~ f) in
-      let old_vel = Body.vel b in
-      let new_vel = Vec3.(old_vel + (dt *~ a)) in
-      let new_pos = Vec3.(Body.pos b + (dt *~ old_vel)) in
-      Body.(b |> with_vel new_vel |> with_pos new_pos))
-    world in
-    resolve_collisions update
+  let update =
+    List.map
+      (fun b ->
+        let f = net_force_on b world in
+        let a = Vec3.(1. /. Body.mass b *~ f) in
+        let old_vel = Body.vel b in
+        let new_vel = Vec3.(old_vel + (dt *~ a)) in
+        let new_pos = Vec3.(Body.pos b + (dt *~ old_vel)) in
+        Body.(b |> with_vel new_vel |> with_pos new_pos))
+      world
+  in
+  resolve_collisions update
 
 let step_with_collisions ~dt world =
-  let update = List.map
-    (fun b ->
-      let f = net_force_on b world in
-      let a = Vec3.(1. /. Body.mass b *~ f) in
-      let old_vel = Body.vel b in
-      let new_vel = Vec3.(old_vel + (dt *~ a)) in
-      let new_pos = Vec3.(Body.pos b + (dt *~ old_vel)) in
-      Body.(b |> with_vel new_vel |> with_pos new_pos))
-    world in
-    resolve_collisions_with_info update
+  let update =
+    List.map
+      (fun b ->
+        let f = net_force_on b world in
+        let a = Vec3.(1. /. Body.mass b *~ f) in
+        let old_vel = Body.vel b in
+        let new_vel = Vec3.(old_vel + (dt *~ a)) in
+        let new_pos = Vec3.(Body.pos b + (dt *~ old_vel)) in
+        Body.(b |> with_vel new_vel |> with_pos new_pos))
+      world
+  in
+  resolve_collisions_with_info update

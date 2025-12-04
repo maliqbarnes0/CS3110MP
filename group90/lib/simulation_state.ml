@@ -57,7 +57,8 @@ let create_initial () =
   in
   {
     world = [];
-    trails = [];  (* Will be initialized based on actual body count *)
+    trails = [];
+    (* Will be initialized based on actual body count *)
     collision_anims = [];
     time_scale = 1.0;
     paused = false;
@@ -96,7 +97,8 @@ let reset_to_defaults state =
     state with
     pending_params = default_params;
     applied_params = default_params;
-    trails = [];  (* Will be initialized based on actual body count *)
+    trails = [];
+    (* Will be initialized based on actual body count *)
     collision_anims = [];
   }
 
@@ -105,7 +107,8 @@ let load_scenario state scenario_name =
   (* Clear trails and animations for new scenario *)
   {
     state with
-    trails = [];  (* Will be initialized based on actual body count *)
+    trails = [];
+    (* Will be initialized based on actual body count *)
     collision_anims = [];
     current_scenario = scenario_name;
   }
@@ -155,7 +158,8 @@ let add_collision_animations state collision_pairs old_body_colors current_time
         let radius1 = Body.radius b1 in
         let radius2 = Body.radius b2 in
 
-        (* Calculate collision point at center of mass - where merged body will be *)
+        (* Calculate collision point at center of mass - where merged body will
+           be *)
         let mass1 = Body.mass b1 in
         let mass2 = Body.mass b2 in
         let total_mass = mass1 +. mass2 in
@@ -163,7 +167,7 @@ let add_collision_animations state collision_pairs old_body_colors current_time
         (* Center of mass calculation - exactly where the merged body appears *)
         let collision_pos =
           let open Vec3 in
-          (1. /. total_mass) *~ ((mass1 *~ pos1) + (mass2 *~ pos2))
+          1. /. total_mass *~ ((mass1 *~ pos1) + (mass2 *~ pos2))
         in
 
         (* Explosion size based on sum of radii, but capped reasonably *)
@@ -179,7 +183,10 @@ let add_collision_animations state collision_pairs old_body_colors current_time
           | Some idx1, Some idx2 ->
               let red1, green1, blue1, alpha1 = List.nth old_body_colors idx1 in
               let red2, green2, blue2, alpha2 = List.nth old_body_colors idx2 in
-              ((red1 + red2) / 2, (green1 + green2) / 2, (blue1 + blue2) / 2, (alpha1 + alpha2) / 2)
+              ( (red1 + red2) / 2,
+                (green1 + green2) / 2,
+                (blue1 + blue2) / 2,
+                (alpha1 + alpha2) / 2 )
           | _ -> (255, 200, 150, 255)
         in
 
@@ -187,7 +194,8 @@ let add_collision_animations state collision_pairs old_body_colors current_time
           {
             position = collision_pos;
             start_time = current_time;
-            duration = 1.2;  (* Slightly longer for better visibility *)
+            duration = 1.2;
+            (* Slightly longer for better visibility *)
             max_radius;
             color = explosion_color;
           }
@@ -217,12 +225,15 @@ let update_trails_with_fading state new_positions current_time =
   let num_trails_needed = max num_bodies (List.length state.trails) in
   let padded_trails =
     if List.length state.trails < num_trails_needed then
-      state.trails @ List.init (num_trails_needed - List.length state.trails) (fun _ -> Active [])
-    else
       state.trails
+      @ List.init
+          (num_trails_needed - List.length state.trails)
+          (fun _ -> Active [])
+    else state.trails
   in
 
-  (* Update trails - add new positions for active bodies, mark others as orphaned *)
+  (* Update trails - add new positions for active bodies, mark others as
+     orphaned *)
   let updated_trails =
     List.mapi
       (fun i trail ->
@@ -240,13 +251,14 @@ let update_trails_with_fading state new_positions current_time =
               in
               Active trimmed
             else
-              (* Body removed - mark as orphaned, keep all positions for smooth fade *)
+              (* Body removed - mark as orphaned, keep all positions for smooth
+                 fade *)
               Orphaned { positions; orphaned_at = current_time }
         | Orphaned { positions; orphaned_at } ->
             (* Already orphaned - keep positions but fade via alpha *)
             let age = current_time -. orphaned_at in
-            if age > fade_duration then
-              Orphaned { positions = []; orphaned_at }  (* Fully faded *)
+            if age > fade_duration then Orphaned { positions = []; orphaned_at }
+              (* Fully faded *)
             else
               (* Keep all positions, alpha will handle the fade *)
               Orphaned { positions; orphaned_at })
@@ -264,7 +276,8 @@ let get_trail_render_info trail current_time =
       let age = current_time -. orphaned_at in
       (* Use a smooth fade curve (quadratic easing) *)
       let linear_alpha = max 0.0 (1.0 -. (age /. fade_duration)) in
-      let alpha = linear_alpha *. linear_alpha in  (* Quadratic fade for smoother look *)
+      let alpha = linear_alpha *. linear_alpha in
+      (* Quadratic fade for smoother look *)
       (positions, alpha)
 
 (** Clean up empty orphaned trails *)

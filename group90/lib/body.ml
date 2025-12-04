@@ -7,7 +7,13 @@ type b = {
 }
 
 let make ~density:d ~pos:p ~vel:v ~radius:r =
-  { density = ref d; pos = p; vel = v; radius = ref r ; mass = ref ((4.0 /. 3.0) *. Float.pi *. r ** 3.0 *. d) }
+  {
+    density = ref d;
+    pos = p;
+    vel = v;
+    radius = ref r;
+    mass = ref (4.0 /. 3.0 *. Float.pi *. (r ** 3.0) *. d);
+  }
 
 let mass b = !(b.mass)
 let pos b = b.pos
@@ -20,11 +26,11 @@ let with_vel v b = { b with vel = v }
 let set_density d b =
   b.density := d;
   let r = !(b.radius) in
-  let volume = (4.0 /. 3.0) *. Float.pi *. (r ** 3.0) in
+  let volume = 4.0 /. 3.0 *. Float.pi *. (r ** 3.0) in
   b.mass := d *. volume
 
 let set_radius r b =
   b.radius := r;
   let d = !(b.density) in
-  let volume = (4.0 /. 3.0) *. Float.pi *. (r ** 3.0) in
+  let volume = 4.0 /. 3.0 *. Float.pi *. (r ** 3.0) in
   b.mass := d *. volume
