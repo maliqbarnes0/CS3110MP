@@ -89,32 +89,44 @@ let create_three_body_system ?(custom_params = None) () =
 let create_randomized_three_body () =
   let rand_range min max = min +. Random.float (max -. min) in
 
-  (* Generate density and radius directly within slider ranges *)
-  let density1 = rand_range 1e9 1e11 in
-  let density2 = rand_range 1e9 1e11 in
-  let density3 = rand_range 1e9 1e11 in
+  (* Generate density and radius - use lower densities for more stable orbits *)
+  (* Density range: 1e9 to 5e10 (instead of 1e11) to reduce mass and gravitational pull *)
+  let density1 = rand_range 1e9 5e10 in
+  let density2 = rand_range 1e9 5e10 in
+  let density3 = rand_range 1e9 5e10 in
 
-  let radius1 = rand_range 10. 40. in
-  let radius2 = rand_range 10. 40. in
-  let radius3 = rand_range 10. 40. in
+  (* Use smaller radii on average to reduce collision cross-section *)
+  let radius1 = rand_range 12. 25. in
+  let radius2 = rand_range 12. 25. in
+  let radius3 = rand_range 12. 25. in
 
-  (* Calculate masses from density and radius for binary orbit positioning *)
-  let mass1 = calculate_mass ~density:density1 ~radius:radius1 in
-  let mass2 = calculate_mass ~density:density2 ~radius:radius2 in
-  let _mass3 = calculate_mass ~density:density3 ~radius:radius3 in
+  (* Use spherical coordinates to ensure good separation *)
+  (* Planet 1: Random angle and distance from origin *)
+  let angle1 = rand_range 0. (2. *. Float.pi) in
+  let distance1 = rand_range 100. 180. in
+  let height1 = rand_range (-40.) 40. in
+  let pos1_x = distance1 *. Float.cos angle1 in
+  let pos1_y = height1 in
+  let pos1_z = distance1 *. Float.sin angle1 in
 
-  let separation = 150. in
-  let offset_x1 = rand_range (-15.) 15. in
-  let offset_y1 = rand_range (-15.) 15. in
-  let offset_z1 = rand_range (-15.) 15. in
-  let offset_x2 = rand_range (-15.) 15. in
-  let offset_y2 = rand_range (-15.) 15. in
-  let offset_z2 = rand_range (-15.) 15. in
-  let offset_x3 = rand_range (-20.) 20. in
-  let offset_y3 = rand_range (-20.) 20. in
-  let offset_z3 = rand_range (-20.) 20. in
+  (* Planet 2: Different angle, ensure separation from planet 1 *)
+  let angle2 = angle1 +. rand_range (2. *. Float.pi /. 3.) (4. *. Float.pi /. 3.) in
+  let distance2 = rand_range 100. 180. in
+  let height2 = rand_range (-40.) 40. in
+  let pos2_x = distance2 *. Float.cos angle2 in
+  let pos2_y = height2 in
+  let pos2_z = distance2 *. Float.sin angle2 in
 
-  let speed_range_max = 6.0 in
+  (* Planet 3: Another different angle, separated from both *)
+  let angle3 = angle2 +. rand_range (2. *. Float.pi /. 3.) (4. *. Float.pi /. 3.) in
+  let distance3 = rand_range 120. 220. in
+  let height3 = rand_range (-50.) 50. in
+  let pos3_x = distance3 *. Float.cos angle3 in
+  let pos3_y = height3 in
+  let pos3_z = distance3 *. Float.sin angle3 in
+
+  (* Generate random velocities with variety in direction and magnitude *)
+  let speed_range_max = 12.0 in
   let vel1_x = rand_range (-.speed_range_max) speed_range_max in
   let vel1_y = rand_range (-.speed_range_max) speed_range_max in
   let vel1_z = rand_range (-.speed_range_max) speed_range_max in
@@ -125,32 +137,23 @@ let create_randomized_three_body () =
   let vel3_y = rand_range (-.speed_range_max) speed_range_max in
   let vel3_z = rand_range (-.speed_range_max) speed_range_max in
 
-  let r1 = separation *. mass2 /. (mass1 +. mass2) in
-  let r2 = separation *. mass1 /. (mass1 +. mass2) in
-
   let body1 =
     Body.make ~density:density1
-      ~pos:(Vec3.make offset_x1 (-.r1 +. offset_y1) offset_z1)
+      ~pos:(Vec3.make pos1_x pos1_y pos1_z)
       ~vel:(Vec3.make vel1_x vel1_y vel1_z)
       ~radius:radius1 ~color:(255., 140., 100., 255.)
     (* Peach *)
   in
   let body2 =
     Body.make ~density:density2
-      ~pos:(Vec3.make offset_x2 (r2 +. offset_y2) offset_z2)
+      ~pos:(Vec3.make pos2_x pos2_y pos2_z)
       ~vel:(Vec3.make vel2_x vel2_y vel2_z)
       ~radius:radius2 ~color:(100., 200., 180., 255.)
     (* Mint *)
   in
-  let third_body_distance = rand_range 180. 240. in
-  let third_body_angle = rand_range 0. (2. *. Float.pi) in
   let body3 =
     Body.make ~density:density3
-      ~pos:
-        (Vec3.make
-           ((third_body_distance *. Float.cos third_body_angle) +. offset_x3)
-           (rand_range 40. 80. +. offset_y3)
-           ((third_body_distance *. Float.sin third_body_angle) +. offset_z3))
+      ~pos:(Vec3.make pos3_x pos3_y pos3_z)
       ~vel:(Vec3.make vel3_x vel3_y vel3_z)
       ~radius:radius3 ~color:(200., 120., 255., 255.)
     (* Soft purple *)

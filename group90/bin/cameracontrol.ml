@@ -21,12 +21,9 @@ let update_camera camera theta phi radius =
   let open Vector3 in
   let target = Camera3D.target camera in
 
-  (* Check if mouse is over sidebar (right side at x >= 600) *)
-  let mouse_over_sidebar = Ui.mouse_over_sidebar () in
-
-  (* Mouse drag to rotate - only if not over sidebar *)
+  (* Mouse drag to rotate *)
   let new_theta, new_phi =
-    if is_mouse_button_down MouseButton.Left && not mouse_over_sidebar then
+    if is_mouse_button_down MouseButton.Left then
       let delta = get_mouse_delta () in
       let sensitivity = 0.003 in
       let theta_change = theta -. (Vector2.x delta *. sensitivity) in
@@ -37,8 +34,8 @@ let update_camera camera theta phi radius =
     else (theta, phi)
   in
 
-  (* Zoom with mouse wheel - only if not over sidebar *)
-  let wheel = if not mouse_over_sidebar then get_mouse_wheel_move () else 0. in
+  (* Zoom with mouse wheel *)
+  let wheel = get_mouse_wheel_move () in
   let new_radius =
     Float.max 10. (Float.min 50000. (radius -. (wheel *. 10.)))
   in

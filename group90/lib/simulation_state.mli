@@ -38,6 +38,8 @@ type t = {
   pending_params : planet_params list;  (** Current slider values *)
   applied_params : planet_params list;  (** Last applied parameter values *)
   current_scenario : string;  (** Name of the current scenario *)
+  sidebar_visible : bool;  (** Whether the planet editor sidebar is visible *)
+  selected_planet : int;  (** Index of the currently selected planet *)
 }
 (** Main simulation state *)
 
@@ -119,3 +121,15 @@ val get_trail_render_info : trail_state -> float -> Vec3.v list * float
 val prune_empty_trails : t -> t
 (** [prune_empty_trails state] is [state] with trails that have fully faded out
     (empty orphaned trails) removed. *)
+
+val set_sidebar_visible : t -> bool -> t
+(** [set_sidebar_visible state visible] is [state] with sidebar visibility set to
+    [visible]. *)
+
+val set_selected_planet : t -> int -> t
+(** [set_selected_planet state planet_idx] is [state] with the selected planet
+    set to [planet_idx]. *)
+
+val cycle_selected_planet : t -> int -> t
+(** [cycle_selected_planet state delta] is [state] with the selected planet
+    cycled by [delta] (wrapping around the number of planets). *)

@@ -6,6 +6,7 @@
     - Camera management
     - Rendering orchestration
     - UI event handling
+    - Planet selection and sidebar management
 
     Backend logic lives in the lib folder:
     - Simulation_state: state management
@@ -17,21 +18,36 @@ open Group90
 
 (** Main simulation loop - handles rendering and input *)
 let rec simulation_loop state camera theta phi radius =
-  (* Handle slider interactions for planet parameters *)
-  let state_after_sliders = handle_slider_input state in
+  (* Handle UI button interactions *)
+  let state_after_ui_buttons = handle_ui_buttons state in
+
+  (* Handle slider interactions for planet parameters (only if sidebar visible) *)
+  let state_after_sliders =
+    if state_after_ui_buttons.Simulation_state.sidebar_visible then
+      handle_slider_input state_after_ui_buttons
+    else state_after_ui_buttons
+  in
 
   (* Handle keyboard input for simulation control *)
   let state_after_keyboard = handle_keyboard_input state_after_sliders in
 
-  (* Update physics if not paused *)
-  let state_after_physics =
-    if state_after_keyboard.Simulation_state.paused then state_after_keyboard
-    else update_physics_step state_after_keyboard
+  (* Handle planet selection *)
+  let state_after_planet_selection =
+    handle_planet_selection state_after_keyboard camera
   in
 
-  (* Update camera based on input *)
+  (* Update physics if not paused *)
+  let state_after_physics =
+    if state_after_planet_selection.Simulation_state.paused then
+      state_after_planet_selection
+    else update_physics_step state_after_planet_selection
+  in
+
+  (* Update camera based on input (only if not over UI) *)
   let new_camera, new_theta, new_phi, new_radius =
-    Cameracontrol.update_camera camera theta phi radius
+    if Ui.mouse_over_ui state_after_physics.sidebar_visible then
+      (camera, theta, phi, radius)
+    else Cameracontrol.update_camera camera theta phi radius
   in
 
   (* Check for exit condition *)
@@ -49,39 +65,103 @@ let rec simulation_loop state camera theta phi radius =
     simulation_loop state_after_physics new_camera new_theta new_phi new_radius
   end
 
+(** Handle UI button interactions *)
+and handle_ui_buttons state =
+  (* Check sidebar close button *)
+  let state_after_close =
+    if
+      Ui.check_sidebar_close_button () && state.Simulation_state.sidebar_visible
+    then Simulation_state.set_sidebar_visible state false
+    else state
+  in
+
+  (* Check arrow buttons *)
+  let state_after_arrows =
+    if state_after_close.Simulation_state.sidebar_visible then begin
+      if Ui.check_left_arrow () then
+        Simulation_state.cycle_selected_planet state_after_close (-1)
+      else if Ui.check_right_arrow () then
+        Simulation_state.cycle_selected_planet state_after_close 1
+      else state_after_close
+    end
+    else state_after_close
+  in
+
+  state_after_arrows
+
+(** Handle planet selection via mouse click *)
+and handle_planet_selection state camera =
+  (* Only process clicks if not over UI *)
+  if
+    is_mouse_button_pressed MouseButton.Left
+    && not (Ui.mouse_over_ui state.Simulation_state.sidebar_visible)
+  then
+    let mouse_pos = get_mouse_position () in
+    let ray = get_screen_to_world_ray mouse_pos camera in
+
+    (* Check collision with each body *)
+    let clicked_planet_idx =
+      List.fold_left
+        (fun acc_idx (i, body) ->
+          match acc_idx with
+          | Some _ -> acc_idx
+          (* Already found a closer hit *)
+          | None ->
+              let body_pos = Body.pos body in
+              let render_scale = 0.1 in
+              let pos_vec3 =
+                Raylib.Vector3.create
+                  (render_scale *. Vec3.x body_pos)
+                  (render_scale *. Vec3.y body_pos)
+                  (render_scale *. Vec3.z body_pos)
+              in
+              let body_radius = Body.radius body *. render_scale in
+              let collision =
+                Raylib.get_ray_collision_sphere ray pos_vec3 body_radius
+              in
+              if Raylib.RayCollision.hit collision then Some i else None)
+        None
+        (List.mapi (fun i b -> (i, b)) state.Simulation_state.world)
+    in
+
+    match clicked_planet_idx with
+    | Some idx ->
+        let state_with_selection =
+          Simulation_state.set_selected_planet state idx
+        in
+        Simulation_state.set_sidebar_visible state_with_selection true
+    | None -> state
+  else state
+
 (** Handle slider input for adjusting planet parameters *)
 and handle_slider_input state =
-  let sidebar_x = 600 in
-  let rec process_sliders i state_acc =
-    if i >= 3 then state_acc (* Process 3 planets *)
-    else begin
-      let base_y = 55 + (i * 145) in
+  let sidebar_x = 560 in
+  let sidebar_y = 50 in
+  let slider_start_y = sidebar_y + 90 in
+  let selected_idx = state.Simulation_state.selected_planet in
 
-      (* Handle density slider *)
-      let state_after_density =
-        match
-          Ui.check_slider_drag (sidebar_x + 50) (base_y + 60) 130 1e9 1e11
-        with
-        | Some new_density ->
-            Simulation_state.update_planet_density state_acc i new_density
-        | None -> state_acc
-      in
-
-      (* Handle radius slider *)
-      let state_after_radius =
-        match
-          Ui.check_slider_drag (sidebar_x + 50) (base_y + 110) 130 10. 40.
-        with
-        | Some new_radius ->
-            Simulation_state.update_planet_radius state_after_density i
-              new_radius
-        | None -> state_after_density
-      in
-
-      process_sliders (i + 1) state_after_radius
-    end
+  (* Handle density slider *)
+  let state_after_density =
+    match
+      Ui.check_slider_drag (sidebar_x + 20) slider_start_y 130 1e9 1e11
+    with
+    | Some new_density ->
+        Simulation_state.update_planet_density state selected_idx new_density
+    | None -> state
   in
-  process_sliders 0 state
+
+  (* Handle radius slider *)
+  let state_after_radius =
+    match
+      Ui.check_slider_drag (sidebar_x + 20) (slider_start_y + 70) 130 10. 40.
+    with
+    | Some new_radius ->
+        Simulation_state.update_planet_radius state_after_density selected_idx
+          new_radius
+    | None -> state_after_density
+  in
+
+  state_after_radius
 
 (** Handle keyboard input for simulation control *)
 and handle_keyboard_input state =
@@ -184,7 +264,9 @@ and load_scenario_by_index state index =
     let scenario_name = List.nth Scenario.all_scenarios index in
     let scenario = Scenario.get_scenario_by_name scenario_name in
     let state_loaded = Simulation_state.load_scenario state scenario.name in
-    let state_with_bodies = Simulation_state.set_world state_loaded scenario.bodies in
+    let state_with_bodies =
+      Simulation_state.set_world state_loaded scenario.bodies
+    in
     (* Update params to match the new scenario, padding to 3 entries *)
     let body_params =
       List.map
@@ -268,8 +350,8 @@ and render_frame state camera =
 
   (* Dark space background *)
 
-  (* Restrict 3D rendering to left side (non-sidebar area) *)
-  begin_scissor_mode 0 0 600 600;
+  (* Restrict 3D rendering to full screen (no permanent sidebar) *)
+  begin_scissor_mode 0 0 800 600;
 
   (* 3D rendering *)
   begin_mode_3d camera;
@@ -338,6 +420,7 @@ and render_frame state camera =
   let has_changes = Simulation_state.has_pending_changes state in
   let num_alive = Simulation_state.num_bodies state in
   Ui.draw_ui is_colliding state.time_scale state.paused state.pending_params
-    has_changes num_alive state.current_scenario state.world;
+    has_changes num_alive state.current_scenario state.world
+    state.sidebar_visible state.selected_planet;
 
   end_drawing ()

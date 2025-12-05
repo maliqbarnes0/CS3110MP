@@ -40,6 +40,8 @@ type t = {
   pending_params : planet_params list;
   applied_params : planet_params list;
   current_scenario : string;
+  sidebar_visible : bool;
+  selected_planet : int;
 }
 (** Main simulation state *)
 
@@ -65,6 +67,8 @@ let create_initial () =
     pending_params = default_params;
     applied_params = default_params;
     current_scenario = "Three-Body Problem";
+    sidebar_visible = true;
+    selected_planet = 0;
   }
 
 (** Update time scale *)
@@ -296,3 +300,17 @@ let prune_empty_trails state =
       state.trails
   in
   { state with trails = non_empty }
+
+(** Set sidebar visibility *)
+let set_sidebar_visible state visible = { state with sidebar_visible = visible }
+
+(** Set selected planet *)
+let set_selected_planet state planet_idx =
+  { state with selected_planet = planet_idx }
+
+(** Cycle selected planet by delta *)
+let cycle_selected_planet state delta =
+  let num_planets = 3 in
+  (* Always 3 planet slots *)
+  let new_idx = (state.selected_planet + delta + num_planets) mod num_planets in
+  { state with selected_planet = new_idx }
