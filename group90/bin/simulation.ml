@@ -86,14 +86,13 @@ and handle_planet_selection state camera =
           | Some _ -> acc_idx
           | None ->
               let body_pos = Body.pos body in
-              let render_scale = 0.1 in
               let pos_vec3 =
                 Raylib.Vector3.create
-                  (render_scale *. Vec3.x body_pos)
-                  (render_scale *. Vec3.y body_pos)
-                  (render_scale *. Vec3.z body_pos)
+                  (Render.render_scale *. Vec3.x body_pos)
+                  (Render.render_scale *. Vec3.y body_pos)
+                  (Render.render_scale *. Vec3.z body_pos)
               in
-              let body_radius = Body.radius body *. render_scale in
+              let body_radius = Body.radius body *. Render.render_scale in
               let collision =
                 Raylib.get_ray_collision_sphere ray pos_vec3 body_radius
               in
@@ -173,14 +172,7 @@ and handle_keyboard_input state =
             (fun body -> (Body.density body, Body.radius body))
             scenario.bodies
         in
-        let default_param = (3e10, 18.) in
-        let reset_params =
-          match body_params with
-          | [] -> [ default_param; default_param; default_param ]
-          | [ p1 ] -> [ p1; default_param; default_param ]
-          | [ p1; p2 ] -> [ p1; p2; default_param ]
-          | p1 :: p2 :: p3 :: _ -> [ p1; p2; p3 ]
-        in
+        let reset_params = Ui.normalize_params body_params in
         {
           state_with_anims with
           pending_params = reset_params;
@@ -232,14 +224,7 @@ and handle_keyboard_input state =
               (fun body -> (Body.density body, Body.radius body))
               scenario.bodies
           in
-          let default_param = (3e10, 18.) in
-          let reset_params =
-            match body_params with
-            | [] -> [ default_param; default_param; default_param ]
-            | [ p1 ] -> [ p1; default_param; default_param ]
-            | [ p1; p2 ] -> [ p1; p2; default_param ]
-            | p1 :: p2 :: p3 :: _ -> [ p1; p2; p3 ]
-          in
+          let reset_params = Ui.normalize_params body_params in
           {
             state_with_anims with
             pending_params = reset_params;
@@ -315,14 +300,7 @@ and load_scenario_by_index state index =
         (fun body -> (Body.density body, Body.radius body))
         scenario.bodies
     in
-    let default_param = (3e10, 18.) in
-    let reset_params =
-      match body_params with
-      | [] -> [ default_param; default_param; default_param ]
-      | [ p1 ] -> [ p1; default_param; default_param ]
-      | [ p1; p2 ] -> [ p1; p2; default_param ]
-      | p1 :: p2 :: p3 :: _ -> [ p1; p2; p3 ]
-    in
+    let reset_params = Ui.normalize_params body_params in
     {
       state_with_bodies with
       pending_params = reset_params;
@@ -340,14 +318,7 @@ and extract_params_tuple params_list =
 and update_physics_step state =
   let current_time = Unix.gettimeofday () in
 
-  let old_body_colors =
-    List.map
-      (fun body ->
-        let r, g, b, a = Group90.Body.color body in
-        let clamp_to_byte x = int_of_float (Float.max 0. (Float.min 255. x)) in
-        (clamp_to_byte r, clamp_to_byte g, clamp_to_byte b, clamp_to_byte a))
-      state.Simulation_state.world
-  in
+  let old_body_colors = List.map Ui.body_color_to_bytes state.Simulation_state.world in
 
   (* Update physics *)
   let new_world, all_collisions =
@@ -404,11 +375,8 @@ and render_frame state camera =
         let r, g, b, base_alpha =
           if i < List.length state.world then
             let body = List.nth state.world i in
-            let r, g, b, a = Group90.Body.color body in
-            let clamp_to_byte x =
-              int_of_float (Float.max 0. (Float.min 255. x))
-            in
-            (clamp_to_byte r, clamp_to_byte g, clamp_to_byte b, 100)
+            let r, g, b, _ = Ui.body_color_to_bytes body in
+            (r, g, b, 100)
           else (200, 200, 200, 100)
         in
         let faded_alpha = int_of_float (float_of_int base_alpha *. alpha) in
@@ -422,21 +390,20 @@ and render_frame state camera =
   List.iter2 Render.draw_body state.world body_colors;
 
   let current_time = Unix.gettimeofday () in
-  let render_scale = 0.1 in
   List.iter
     (fun anim ->
       let age = current_time -. anim.Simulation_state.start_time in
       let progress = age /. anim.duration in
       if progress < 1.0 then begin
-        let current_radius = anim.max_radius *. progress *. render_scale in
+        let current_radius = anim.max_radius *. progress *. Render.render_scale in
         let alpha = int_of_float (255.0 *. (1.0 -. progress)) in
         let r, g, b, _ = anim.color in
         let fade_color = Raylib.Color.create r g b alpha in
         let pos_vec3 =
           Raylib.Vector3.create
-            (render_scale *. Vec3.x anim.position)
-            (render_scale *. Vec3.y anim.position)
-            (render_scale *. Vec3.z anim.position)
+            (Render.render_scale *. Vec3.x anim.position)
+            (Render.render_scale *. Vec3.y anim.position)
+            (Render.render_scale *. Vec3.z anim.position)
         in
         Raylib.draw_sphere pos_vec3 current_radius fade_color
       end)

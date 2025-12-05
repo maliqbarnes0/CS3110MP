@@ -1,5 +1,10 @@
 open Raylib
 
+(* Sidebar layout constants *)
+let sidebar_x = 560
+let sidebar_y = 50
+let sidebar_width = 230
+
 (* Create colors *)
 let color r g b a = Color.create r g b a
 let black = color 0 0 0 255
@@ -8,9 +13,11 @@ let red = color 255 0 0 255
 let gray = color 80 80 80 255
 let dark_gray = color 40 40 40 255
 
+(* Clamp float to byte range [0-255] *)
+let clamp_to_byte x = int_of_float (Float.max 0. (Float.min 255. x))
+
 (* Body.color tuple to Raylib Color *)
 let body_color_to_raylib (r, g, b, a) =
-  let clamp_to_byte x = int_of_float (Float.max 0. (Float.min 255. x)) in
   color (clamp_to_byte r) (clamp_to_byte g) (clamp_to_byte b) (clamp_to_byte a)
 
 let get_body_color_from_body body =
@@ -141,9 +148,6 @@ let draw_instructions time_scale paused current_scenario =
 
 (* Draw planet sidebar *)
 let draw_sidebar selected_planet_idx planet_params world num_alive =
-  let sidebar_x = 560 in
-  let sidebar_y = 50 in
-  let sidebar_width = 230 in
   let sidebar_height = 250 in
 
   draw_rectangle sidebar_x sidebar_y sidebar_width sidebar_height
@@ -292,3 +296,17 @@ let mouse_over_ui sidebar_visible =
   in
 
   over_instructions || over_exit || over_sidebar
+
+(* Normalize parameter list to exactly 3 elements *)
+let normalize_params body_params =
+  let default_param = (3e10, 18.) in
+  match body_params with
+  | [] -> [ default_param; default_param; default_param ]
+  | [ p1 ] -> [ p1; default_param; default_param ]
+  | [ p1; p2 ] -> [ p1; p2; default_param ]
+  | p1 :: p2 :: p3 :: _ -> [ p1; p2; p3 ]
+
+(* Extract color components from body as clamped bytes *)
+let body_color_to_bytes body =
+  let r, g, b, a = Group90.Body.color body in
+  (clamp_to_byte r, clamp_to_byte g, clamp_to_byte b, clamp_to_byte a)
