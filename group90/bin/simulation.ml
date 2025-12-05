@@ -167,48 +167,24 @@ and handle_slider_input state =
 
 (** Handle keyboard input for simulation control *)
 and handle_keyboard_input state =
-  (* Check for scenario switching (1-6 keys) *)
+  (* Check for scenario switching (1-5 keys) *)
   let state_after_scenario =
     if is_key_pressed Key.One then load_scenario_by_index state 0
     else if is_key_pressed Key.Two then load_scenario_by_index state 1
     else if is_key_pressed Key.Three then load_scenario_by_index state 2
     else if is_key_pressed Key.Four then load_scenario_by_index state 3
     else if is_key_pressed Key.Five then load_scenario_by_index state 4
-    else if is_key_pressed Key.Six then load_scenario_by_index state 5
     else state
   in
 
   (* Check for reset (R key) - reset current scenario *)
   let state_after_reset =
     if is_key_pressed Key.R then begin
-      (* For Three-Body Problem scenario, allow custom params from sliders *)
       let scenario_name =
         state_after_scenario.Simulation_state.current_scenario
       in
-      if scenario_name = "Three-Body Problem" then begin
-        (* Use current pending_params (slider values) to create new bodies *)
-        let new_bodies =
-          Scenario.create_three_body_system
-            ~custom_params:
-              (Some
-                 (extract_params_tuple
-                    state_after_scenario.Simulation_state.pending_params))
-            ()
-        in
-        let state_with_bodies =
-          Simulation_state.set_world state_after_scenario new_bodies
-        in
-        let state_with_trails =
-          Simulation_state.set_trails state_with_bodies []
-        in
-        let state_with_anims =
-          Simulation_state.set_collision_anims state_with_trails []
-        in
-        (* Mark current params as applied *)
-        Simulation_state.apply_params state_with_anims
-      end
-      else begin
-        (* For other scenarios, reload from definition (no custom params) *)
+      (* For Randomized 3-Body, always generate fresh random bodies *)
+      if scenario_name = "Randomized 3-Body" then begin
         let scenario = Scenario.get_scenario_by_name scenario_name in
         let state_with_bodies =
           Simulation_state.set_world state_after_scenario scenario.bodies
@@ -219,8 +195,7 @@ and handle_keyboard_input state =
         let state_with_anims =
           Simulation_state.set_collision_anims state_with_trails []
         in
-        (* Reset params to match the scenario's initial bodies *)
-        (* Always pad to 3 params for UI consistency *)
+        (* Reset params to match the new random bodies *)
         let body_params =
           List.map
             (fun body -> (Body.density body, Body.radius body))
@@ -239,6 +214,61 @@ and handle_keyboard_input state =
           pending_params = reset_params;
           applied_params = reset_params;
         }
+      end
+      (* For all other scenarios (1, 3-6), use current slider values *)
+      else begin
+        (* For Three-Body Problem, use the specialized function with custom params *)
+        if scenario_name = "Three-Body Problem" then begin
+          let new_bodies =
+            Scenario.create_three_body_system
+              ~custom_params:
+                (Some
+                   (extract_params_tuple
+                      state_after_scenario.Simulation_state.pending_params))
+              ()
+          in
+          let state_with_bodies =
+            Simulation_state.set_world state_after_scenario new_bodies
+          in
+          let state_with_trails =
+            Simulation_state.set_trails state_with_bodies []
+          in
+          let state_with_anims =
+            Simulation_state.set_collision_anims state_with_trails []
+          in
+          Simulation_state.apply_params state_with_anims
+        end
+        (* For scenarios 3-6, reload base scenario then update bodies with slider values *)
+        else begin
+          let scenario = Scenario.get_scenario_by_name scenario_name in
+          (* Update existing bodies with slider values *)
+          let updated_bodies =
+            List.mapi
+              (fun i body ->
+                if i < List.length state_after_scenario.Simulation_state.pending_params
+                then begin
+                  let new_density, new_radius =
+                    List.nth state_after_scenario.Simulation_state.pending_params i
+                  in
+                  (* Recreate body with updated density and radius *)
+                  Body.make ~density:new_density ~pos:(Body.pos body)
+                    ~vel:(Body.vel body) ~radius:new_radius
+                    ~color:(Body.color body)
+                end
+                else body)
+              scenario.bodies
+          in
+          let state_with_bodies =
+            Simulation_state.set_world state_after_scenario updated_bodies
+          in
+          let state_with_trails =
+            Simulation_state.set_trails state_with_bodies []
+          in
+          let state_with_anims =
+            Simulation_state.set_collision_anims state_with_trails []
+          in
+          Simulation_state.apply_params state_with_anims
+        end
       end
     end
     else state_after_scenario

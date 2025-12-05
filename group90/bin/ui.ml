@@ -150,9 +150,7 @@ let draw_instructions time_scale paused current_scenario =
     (color 180 180 200 255);
   draw_text "[5] Collision" (box_x + 10) (box_y + 96) 8
     (color 180 180 200 255);
-  draw_text "[6] Figure-8" (box_x + 10) (box_y + 108) 8
-    (color 180 180 200 255);
-  draw_text "[R] Restart" (box_x + 10) (box_y + 120) 8
+  draw_text "[R] Restart" (box_x + 10) (box_y + 108) 8
     (color 180 180 200 255);
 
   draw_line (box_x + 5) (box_y + 132) (box_x + box_width - 5) (box_y + 132)

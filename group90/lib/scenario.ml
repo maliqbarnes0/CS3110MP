@@ -305,40 +305,6 @@ let collision_scenario () =
     recommended_camera = (0.0, 0.0, 400.0);
   }
 
-(** Figure-8 Orbit - special chaotic three-body configuration *)
-let figure_eight_scenario () =
-  let body_density = 3e10 in
-  let body_radius = 18. in
-
-  (* Figure-8 requires very specific initial conditions *)
-  let body1 =
-    Body.make ~density:body_density
-      ~pos:(Vec3.make 97.0 (-24.3) 0.)
-      ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius
-      ~color:(255., 150., 150., 255.)
-    (* Rose *)
-  in
-  let body2 =
-    Body.make ~density:body_density
-      ~pos:(Vec3.make (-97.0) 24.3 0.)
-      ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius
-      ~color:(150., 255., 150., 255.)
-    (* Mint green *)
-  in
-  let body3 =
-    Body.make ~density:body_density ~pos:(Vec3.make 0. 0. 0.)
-      ~vel:(Vec3.make (-0.932) (-0.866) 0.)
-      ~radius:body_radius ~color:(150., 150., 255., 255.)
-    (* Periwinkle *)
-  in
-
-  {
-    name = "Figure-8 Orbit";
-    description = "Chaotic three-body figure-8 configuration";
-    bodies = [ body1; body2; body3 ];
-    recommended_camera = (0.0, 0.0, 400.0);
-  }
-
 (** Get scenario by name *)
 let get_scenario_by_name name =
   match name with
@@ -346,7 +312,6 @@ let get_scenario_by_name name =
   | "Binary Star" -> binary_star_scenario ()
   | "Solar System" -> solar_system_scenario ()
   | "Collision Course" -> collision_scenario ()
-  | "Figure-8 Orbit" -> figure_eight_scenario ()
   | "Three-Body Problem" | _ -> default_scenario ()
 
 (** List of all available scenarios *)
@@ -357,5 +322,4 @@ let all_scenarios =
     "Binary Star";
     "Solar System";
     "Collision Course";
-    "Figure-8 Orbit";
   ]
