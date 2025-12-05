@@ -1,3 +1,13 @@
+(**
+   Abstraction Function (AF):
+   The record {x; y; z} represents the 3D vector with components x, y, z in
+   Cartesian coordinates.
+
+   Representation Invariant (RI):
+   - All float fields (x, y, z) must be valid floating-point numbers (not NaN).
+   - This includes positive/negative infinity as valid values for physics
+     calculations.
+*)
 type v = {
   x : float;
   y : float;

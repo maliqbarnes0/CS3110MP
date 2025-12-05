@@ -235,7 +235,8 @@ let binary_star_scenario () =
 
 (** Solar System-like - central star with orbiting planets *)
 let solar_system_scenario () =
-  let sun_density = 8e10 in
+  (* Increased sun density for stronger gravitational pull and stability *)
+  let sun_density = 1.2e11 in
   let sun_radius = 30. in
   let sun =
     Body.make ~density:sun_density ~pos:(Vec3.make 0. 0. 0.)
@@ -246,10 +247,10 @@ let solar_system_scenario () =
 
   let sun_mass = calculate_mass ~density:sun_density ~radius:sun_radius in
 
-  (* Inner planet *)
+  (* Inner planet - orbits in XZ plane *)
   let planet1_radius = 12. in
   let planet1_density = 2e10 in
-  let orbit1 = 100. in
+  let orbit1 = 180. in
   let v1 = Float.sqrt (g *. sun_mass /. orbit1) in
   let planet1 =
     Body.make ~density:planet1_density ~pos:(Vec3.make orbit1 0. 0.)
@@ -258,15 +259,15 @@ let solar_system_scenario () =
     (* Dusty rose *)
   in
 
-  (* Outer planet *)
+  (* Outer planet - orbits in XY plane (perpendicular) to avoid collision *)
   let planet2_radius = 15. in
   let planet2_density = 1.8e10 in
-  let orbit2 = 180. in
+  let orbit2 = 250. in
   let v2 = Float.sqrt (g *. sun_mass /. orbit2) in
   let planet2 =
     Body.make ~density:planet2_density
-      ~pos:(Vec3.make (-.orbit2) 0. 0.)
-      ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:planet2_radius
+      ~pos:(Vec3.make orbit2 0. 0.)
+      ~vel:(Vec3.make 0. v2 0.) ~radius:planet2_radius
       ~color:(100., 180., 220., 255.)
     (* Sky blue *)
   in
@@ -275,7 +276,7 @@ let solar_system_scenario () =
     name = "Solar System";
     description = "Central star with two orbiting planets";
     bodies = [ sun; planet1; planet2 ];
-    recommended_camera = (0.0, 0.0, 450.0);
+    recommended_camera = (0.0, 0.0, 500.0);
   }
 
 (** Collision Course - two bodies heading for collision *)
