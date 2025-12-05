@@ -23,7 +23,7 @@ let () =
   (* Setup 3D camera closer to action *)
   let camera =
     Camera3D.create
-      (Vector3.create 150. 100. 150.) (* position: much closer view *)
+      (Vector3.create 60. 40. 60.) (* position: zoomed in view *)
       (Vector3.create 0. 0. 0.) (* target: origin *)
       (Vector3.create 0. 1. 0.) (* up vector *)
       70. (* fov - wider to see more *)
@@ -32,10 +32,10 @@ let () =
 
   (* Initial spherical coordinates for camera *)
   let initial_radius =
-    Float.sqrt ((150. *. 150.) +. (100. *. 100.) +. (150. *. 150.))
+    Float.sqrt ((60. *. 60.) +. (40. *. 40.) +. (60. *. 60.))
   in
-  let initial_theta = Float.atan2 150. 150. in
-  let initial_phi = Float.asin (100. /. initial_radius) in
+  let initial_theta = Float.atan2 60. 60. in
+  let initial_phi = Float.asin (40. /. initial_radius) in
 
   (* Create initial simulation state using backend modules *)
   let default_scenario = Group90.Scenario.default_scenario () in

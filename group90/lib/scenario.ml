@@ -141,22 +141,22 @@ let create_randomized_three_body () =
     Body.make ~density:density1
       ~pos:(Vec3.make pos1_x pos1_y pos1_z)
       ~vel:(Vec3.make vel1_x vel1_y vel1_z)
-      ~radius:radius1 ~color:(255., 140., 100., 255.)
-    (* Peach *)
+      ~radius:radius1 ~color:(0., 255., 255., 255.)
+    (* Cyan *)
   in
   let body2 =
     Body.make ~density:density2
       ~pos:(Vec3.make pos2_x pos2_y pos2_z)
       ~vel:(Vec3.make vel2_x vel2_y vel2_z)
-      ~radius:radius2 ~color:(100., 200., 180., 255.)
-    (* Mint *)
+      ~radius:radius2 ~color:(255., 0., 255., 255.)
+    (* Magenta *)
   in
   let body3 =
     Body.make ~density:density3
       ~pos:(Vec3.make pos3_x pos3_y pos3_z)
       ~vel:(Vec3.make vel3_x vel3_y vel3_z)
-      ~radius:radius3 ~color:(200., 120., 255., 255.)
-    (* Soft purple *)
+      ~radius:radius3 ~color:(255., 255., 0., 255.)
+    (* Yellow *)
   in
   [ body1; body2; body3 ]
 
