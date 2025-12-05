@@ -70,18 +70,21 @@ let create_three_body_system ?(custom_params = None) () =
     Body.make ~density:density1
       ~pos:(Vec3.make com_x (com_y -. r1) com_z)
       ~vel:(Vec3.make 0. 0. v1) ~radius:radius1
+      ~color:(255., 100., 100., 255.)
   in
   (* Body 2 - Medium companion orbiting opposite direction *)
   let body2 =
     Body.make ~density:density2
       ~pos:(Vec3.make com_x (com_y +. r2) com_z)
       ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:radius2
+      ~color:(100., 255., 100., 255.)
   in
   (* Body 3 - Interloper approaching at an angle *)
   let body3 =
     Body.make ~density:density3 ~pos:(Vec3.make 180. 60. 100.)
       ~vel:(Vec3.make (-1.0) (-0.4) (-0.6))
       ~radius:radius3
+      ~color:(100., 100., 255., 255.)
   in
   [ body1; body2; body3 ]
 
@@ -150,12 +153,14 @@ let create_randomized_three_body () =
       ~pos:(Vec3.make offset_x1 (-.r1 +. offset_y1) offset_z1)
       ~vel:(Vec3.make vel1_x vel1_y vel1_z)
       ~radius:radius1
+      ~color:(255., 150., 100., 255.)
   in
   let body2 =
     Body.make ~density:density2
       ~pos:(Vec3.make offset_x2 (r2 +. offset_y2) offset_z2)
       ~vel:(Vec3.make vel2_x vel2_y vel2_z)
       ~radius:radius2
+      ~color:(100., 255., 150., 255.)
   in
   let third_body_distance = rand_range 180. 240. in
   let third_body_angle = rand_range 0. (2. *. Float.pi) in
@@ -168,6 +173,7 @@ let create_randomized_three_body () =
            ((third_body_distance *. Float.sin third_body_angle) +. offset_z3))
       ~vel:(Vec3.make vel3_x vel3_y vel3_z)
       ~radius:radius3
+      ~color:(150., 100., 255., 255.)
   in
   [ body1; body2; body3 ]
 
@@ -227,10 +233,12 @@ let binary_star_scenario () =
   let star1 =
     Body.make ~density:star_density ~pos:(Vec3.make 0. (-.r1) 0.)
       ~vel:(Vec3.make v1 0. 0.) ~radius:star1_radius
+      ~color:(255., 200., 100., 255.)
   in
   let star2 =
     Body.make ~density:star_density ~pos:(Vec3.make 0. r2 0.)
       ~vel:(Vec3.make (-.v2) 0. 0.) ~radius:star2_radius
+      ~color:(100., 200., 255., 255.)
   in
 
   {
@@ -247,6 +255,7 @@ let solar_system_scenario () =
   let sun =
     Body.make ~density:sun_density ~pos:(Vec3.make 0. 0. 0.)
       ~vel:(Vec3.make 0. 0. 0.) ~radius:sun_radius
+      ~color:(255., 255., 100., 255.)
   in
 
   let sun_mass = calculate_mass ~density:sun_density ~radius:sun_radius in
@@ -259,6 +268,7 @@ let solar_system_scenario () =
   let planet1 =
     Body.make ~density:planet1_density ~pos:(Vec3.make orbit1 0. 0.)
       ~vel:(Vec3.make 0. 0. v1) ~radius:planet1_radius
+      ~color:(150., 100., 200., 255.)
   in
 
   (* Outer planet *)
@@ -270,6 +280,7 @@ let solar_system_scenario () =
     Body.make ~density:planet2_density
       ~pos:(Vec3.make (-.orbit2) 0. 0.)
       ~vel:(Vec3.make 0. 0. (-.v2)) ~radius:planet2_radius
+      ~color:(100., 150., 255., 255.)
   in
 
   {
@@ -289,10 +300,12 @@ let collision_scenario () =
   let body1 =
     Body.make ~density:body1_density ~pos:(Vec3.make (-150.) 0. 0.)
       ~vel:(Vec3.make 2.0 0. 0.) ~radius:body1_radius
+      ~color:(255., 100., 100., 255.)
   in
   let body2 =
     Body.make ~density:body2_density ~pos:(Vec3.make 150. 0. 0.)
       ~vel:(Vec3.make (-2.0) 0. 0.) ~radius:body2_radius
+      ~color:(100., 100., 255., 255.)
   in
 
   {
@@ -312,16 +325,19 @@ let figure_eight_scenario () =
     Body.make ~density:body_density
       ~pos:(Vec3.make 97.0 (-24.3) 0.)
       ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius
+      ~color:(255., 100., 100., 255.)
   in
   let body2 =
     Body.make ~density:body_density
       ~pos:(Vec3.make (-97.0) 24.3 0.)
       ~vel:(Vec3.make 0.466 0.433 0.) ~radius:body_radius
+      ~color:(100., 255., 100., 255.)
   in
   let body3 =
     Body.make ~density:body_density ~pos:(Vec3.make 0. 0. 0.)
       ~vel:(Vec3.make (-0.932) (-0.866) 0.)
       ~radius:body_radius
+      ~color:(100., 100., 255., 255.)
   in
 
   {

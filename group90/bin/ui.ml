@@ -21,7 +21,16 @@ let red = color 255 0 0 255
 let gray = color 80 80 80 255
 let dark_gray = color 40 40 40 255
 
-(* Get color for a body based on index *)
+(* Get color for a body - converts Body.color tuple to Raylib Color *)
+let body_color_to_raylib (r, g, b, a) =
+  color (int_of_float r) (int_of_float g) (int_of_float b) (int_of_float a)
+
+(* Get color for a body based on the body itself *)
+let get_body_color_from_body body =
+  let c = Group90.Body.color body in
+  body_color_to_raylib c
+
+(* Fallback: Get color for a body based on index (for when body isn't available) *)
 let get_body_color index =
   let all_body_colors =
     [ color 255 200 100 255; color 100 150 255 255; color 255 100 100 255 ]
@@ -84,7 +93,7 @@ let check_slider_drag x y width min_val max_val =
 
 (* Draw 2D UI overlay with sidebar *)
 let draw_ui is_colliding time_scale paused planet_params has_changes
-    num_alive_planets current_scenario =
+    num_alive_planets current_scenario world =
   (* Sidebar panel - right side *)
   let sidebar_x = 600 in
   let sidebar_y = 0 in
@@ -104,18 +113,23 @@ let draw_ui is_colliding time_scale paused planet_params has_changes
 
   (* No change notification needed - changes are always live *)
 
-  (* Planet controls - always show all 3 *)
-  let planet_colors =
-    [
-      ("Planet 1", color 255 200 100 255);
-      ("Planet 2", color 100 150 255 255);
-      ("Planet 3", color 255 100 100 255);
-    ]
+  (* Planet controls - always show all 3, get colors from bodies if available *)
+  let planet_info =
+    List.mapi
+      (fun i (density, radius) ->
+        let name = Printf.sprintf "Planet %d" (i + 1) in
+        let col =
+          if i < List.length world then
+            get_body_color_from_body (List.nth world i)
+          else
+            get_body_color i
+        in
+        (name, col, density, radius))
+      planet_params
   in
 
   List.iteri
-    (fun i (name, col) ->
-      let density, radius = List.nth planet_params i in
+    (fun i (name, col, density, radius) ->
       let base_y = 55 + (i * 145) in
       let is_merged = i >= num_alive_planets in
 
@@ -136,7 +150,7 @@ let draw_ui is_colliding time_scale paused planet_params has_changes
         draw_line (sidebar_x + 10) (base_y + 130)
           (sidebar_x + sidebar_width - 10)
           (base_y + 130) (color 50 60 80 255))
-    planet_colors;
+    planet_info;
 
   (* Scenario info *)
   draw_line (sidebar_x + 10) 470

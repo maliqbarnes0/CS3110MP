@@ -16,7 +16,7 @@ let approx_vec ?(eps = 1e-6) v1 v2 =
 (* Updated helper to include radius *)
 let make_body ~pos ~vel ~mass ?(radius = 1.0) () =
   let density = mass /. (4.0 /. 3.0 *. Float.pi *. (radius ** 3.0)) in
-  Body.make ~pos ~vel ~density ~radius
+  Body.make ~pos ~vel ~density ~radius ~color:(255., 255., 255., 255.)
 
 (* ---------- g ---------- *)
 

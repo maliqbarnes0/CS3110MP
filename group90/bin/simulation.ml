@@ -161,10 +161,10 @@ and update_physics_step state =
 
   (* Store old body colors before physics update as RGBA tuples *)
   let old_body_colors =
-    List.mapi
-      (fun i _ ->
-        let c = Ui.get_body_color i in
-        (Raylib.Color.r c, Raylib.Color.g c, Raylib.Color.b c, Raylib.Color.a c))
+    List.map
+      (fun body ->
+        let r, g, b, a = Group90.Body.color body in
+        (int_of_float r, int_of_float g, int_of_float b, int_of_float a))
       state.Simulation_state.world
   in
 
@@ -218,35 +218,29 @@ and render_frame state camera =
 
   (* Draw trails with fading for orphaned trails *)
   let current_time = Unix.gettimeofday () in
-  let base_trail_colors =
-    [ (255, 200, 100, 100); (100, 150, 255, 100); (255, 100, 100, 100) ]
-  in
   List.iteri
     (fun i trail ->
       let positions, alpha =
         Simulation_state.get_trail_render_info trail current_time
       in
       if List.length positions > 0 then begin
-        let r, g, b, a =
-          if i < List.length base_trail_colors then List.nth base_trail_colors i
-          else (200, 200, 200, 100)
+        (* Get color from corresponding body if available, otherwise use default *)
+        let r, g, b, base_alpha =
+          if i < List.length state.world then
+            let body = List.nth state.world i in
+            let r, g, b, a = Group90.Body.color body in
+            (int_of_float r, int_of_float g, int_of_float b, 100)
+          else
+            (200, 200, 200, 100)
         in
-        let faded_alpha = int_of_float (float_of_int a *. alpha) in
+        let faded_alpha = int_of_float (float_of_int base_alpha *. alpha) in
         let trail_color = Ui.color r g b faded_alpha in
         Render.draw_trail positions trail_color
       end)
     state.Simulation_state.trails;
 
-  (* Draw bodies - only use as many colors as we have bodies *)
-  let all_body_colors =
-    [
-      Ui.color 255 200 100 255;
-      Ui.color 100 150 255 255;
-      Ui.color 255 100 100 255;
-    ]
-  in
-  let num_bodies = List.length state.world in
-  let body_colors = List.filteri (fun i _ -> i < num_bodies) all_body_colors in
+  (* Draw bodies - get colors from body data *)
+  let body_colors = List.map Ui.get_body_color_from_body state.world in
   List.iter2 Render.draw_body state.world body_colors;
 
   (* Draw collision animations *)
@@ -280,6 +274,6 @@ and render_frame state camera =
   let has_changes = Simulation_state.has_pending_changes state in
   let num_alive = Simulation_state.num_bodies state in
   Ui.draw_ui is_colliding state.time_scale state.paused state.pending_params
-    has_changes num_alive state.current_scenario;
+    has_changes num_alive state.current_scenario state.world;
 
   end_drawing ()
