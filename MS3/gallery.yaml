@@ -1,0 +1,36 @@
+---
+# Members of your group.
+group:
+  - name: Anthony Paredes-Bautista
+    netid: ap2357
+  - name: Felix Grimm
+    netid: fjg45
+  - name: Nathnael Tesfaw
+    netid: nbt26
+  - name: Maliq Barnes
+    netid: db927
+
+# Your PM.
+pm:
+  name: Leo Qian
+  netid: rq48
+# Set to false if you don't want your gallery entry to be public.
+publish: true
+# Pithy title
+title: "3-caml problem"
+# OK if this is a Cornell Github link, but public gallery viewers won't be able to see it.
+git-repo: https://github.com/Anthony-PB/CS3110MP
+# Replace the URL with your own demo video.
+demo-video-url: https://youtu.be/-rssoBP_jrM
+# Write a short, attention-grabbing description of your project.
+desc: >
+  Our project is a 3-Body Orbital Simulator that tackles the famous, unsolvable physics 
+  problem where three celestial bodies interact gravitationally. We're building a custom 
+  physics engine to compute the complex, non-repeating trajectories resulting from their 
+  mutual gravitational fields.
+
+  The core feature is an interactive 3D Graphical User Interface (GUI) that vividly renders 
+  the three planets orbiting in simulated space. Users can dynamically experiment with the 
+  system by using sliders to adjust parameters such as the planets' mass, initial velocity, 
+  or density in real-time, instantly observing the resulting chaotic, unpredictable orbital 
+  changes.
