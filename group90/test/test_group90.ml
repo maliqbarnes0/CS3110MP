@@ -100,8 +100,9 @@ let test_step_single_body _ =
 
 let test_step_two_body_moves_toward_each_other _ =
   let v0 = vec 0. 0. 0. in
-  let b1 = make_body ~pos:(vec (-1.) 0. 0.) ~vel:v0 ~mass:10. () in
-  let b2 = make_body ~pos:(vec 1. 0. 0.) ~vel:v0 ~mass:10. () in
+  (* Use smaller radius to avoid collision at distance 2 *)
+  let b1 = make_body ~pos:(vec (-1.) 0. 0.) ~vel:v0 ~mass:10. ~radius:0.5 () in
+  let b2 = make_body ~pos:(vec 1. 0. 0.) ~vel:v0 ~mass:10. ~radius:0.5 () in
   let world' = Engine.step ~dt:0.1 [ b1; b2 ] in
   match world' with
   | [ b1'; b2' ] ->

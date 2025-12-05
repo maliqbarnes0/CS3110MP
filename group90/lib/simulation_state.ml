@@ -166,8 +166,13 @@ let add_collision_animations state collision_pairs old_body_colors current_time
 
         (* Center of mass calculation - exactly where the merged body appears *)
         let collision_pos =
-          let open Vec3 in
-          1. /. total_mass *~ ((mass1 *~ pos1) + (mass2 *~ pos2))
+          if total_mass = 0. then
+            (* Edge case: both bodies have zero mass, use midpoint *)
+            let open Vec3 in
+            0.5 *~ (pos1 + pos2)
+          else
+            let open Vec3 in
+            1. /. total_mass *~ ((mass1 *~ pos1) + (mass2 *~ pos2))
         in
 
         (* Explosion size based on sum of radii, but capped reasonably *)

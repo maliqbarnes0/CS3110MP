@@ -11,28 +11,46 @@ let merge b1 b2 =
   let pos2 = Body.pos b2 in
 
   (*Center of mass*)
-  let pos = Vec3.(1. /. m *~ ((m1 *~ pos1) + (m2 *~ pos2))) in
+  let pos =
+    if m = 0. then Vec3.(0.5 *~ (pos1 + pos2))
+    else Vec3.(1. /. m *~ ((m1 *~ pos1) + (m2 *~ pos2)))
+  in
   (*new velocity, perfectly inelastic collision (momentum)*)
   let v1 = Body.vel b1 in
   let v2 = Body.vel b2 in
-  let vel = Vec3.(1. /. m *~ ((m1 *~ v1) + (m2 *~ v2))) in
+  let vel =
+    if m = 0. then Vec3.(0.5 *~ (v1 + v2))
+    else Vec3.(1. /. m *~ ((m1 *~ v1) + (m2 *~ v2)))
+  in
   let rho1 = Body.density b1 in
   let rho2 = Body.density b2 in
-  let volume1 = m1 /. rho1 in
-  let volume2 = m2 /. rho2 in
+  (* Prevent division by zero in volume calculation *)
+  let volume1 = if rho1 = 0. then 0. else m1 /. rho1 in
+  let volume2 = if rho2 = 0. then 0. else m2 /. rho2 in
   let v = volume1 +. volume2 in
 
-  let density = m /. v in
-  let radius = (3. *. v /. (4. *. Float.pi)) ** (1. /. 3.) in
+  (* Prevent division by zero in density calculation *)
+  let density = if v = 0. then 1. else m /. v in
+  let radius =
+    if v = 0. then 1. else (3. *. v /. (4. *. Float.pi)) ** (1. /. 3.)
+  in
 
   (* Blend colors based on mass proportions *)
   let c1r, c1g, c1b, c1a = Body.color b1 in
   let c2r, c2g, c2b, c2a = Body.color b2 in
+  let clamp x = Float.max 0. (Float.min 255. x) in
   let color =
-    ( (m1 *. c1r +. m2 *. c2r) /. m,
-      (m1 *. c1g +. m2 *. c2g) /. m,
-      (m1 *. c1b +. m2 *. c2b) /. m,
-      (m1 *. c1a +. m2 *. c2a) /. m )
+    if m = 0. then
+      (* Edge case: both bodies have zero mass, average the colors *)
+      ( clamp ((c1r +. c2r) /. 2.),
+        clamp ((c1g +. c2g) /. 2.),
+        clamp ((c1b +. c2b) /. 2.),
+        clamp ((c1a +. c2a) /. 2.) )
+    else
+      ( clamp ((m1 *. c1r +. m2 *. c2r) /. m),
+        clamp ((m1 *. c1g +. m2 *. c2g) /. m),
+        clamp ((m1 *. c1b +. m2 *. c2b) /. m),
+        clamp ((m1 *. c1a +. m2 *. c2a) /. m) )
   in
 
   (*creating new merged body*)

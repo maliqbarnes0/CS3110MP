@@ -60,7 +60,7 @@ and handle_slider_input state =
       (* Handle density slider *)
       let state_after_density =
         match
-          Ui.check_slider_drag (sidebar_x + 50) (base_y + 60) 130 1e10 6e10
+          Ui.check_slider_drag (sidebar_x + 50) (base_y + 60) 130 1e9 1e11
         with
         | Some new_density ->
             Simulation_state.update_planet_density state_acc i new_density
@@ -96,29 +96,68 @@ and handle_keyboard_input state =
     else state
   in
 
-  (* Check for reset (R key) - reset scenario with current slider values *)
+  (* Check for reset (R key) - reset current scenario *)
   let state_after_reset =
     if is_key_pressed Key.R then begin
-      (* Use current pending_params (slider values) to create new bodies *)
-      let new_bodies =
-        Scenario.create_three_body_system
-          ~custom_params:
-            (Some
-               (extract_params_tuple
-                  state_after_scenario.Simulation_state.pending_params))
-          ()
+      (* For Three-Body Problem scenario, allow custom params from sliders *)
+      let scenario_name =
+        state_after_scenario.Simulation_state.current_scenario
       in
-      let state_with_bodies =
-        Simulation_state.set_world state_after_scenario new_bodies
-      in
-      let state_with_trails =
-        Simulation_state.set_trails state_with_bodies []
-      in
-      let state_with_anims =
-        Simulation_state.set_collision_anims state_with_trails []
-      in
-      (* Mark current params as applied *)
-      Simulation_state.apply_params state_with_anims
+      if scenario_name = "Three-Body Problem" then begin
+        (* Use current pending_params (slider values) to create new bodies *)
+        let new_bodies =
+          Scenario.create_three_body_system
+            ~custom_params:
+              (Some
+                 (extract_params_tuple
+                    state_after_scenario.Simulation_state.pending_params))
+            ()
+        in
+        let state_with_bodies =
+          Simulation_state.set_world state_after_scenario new_bodies
+        in
+        let state_with_trails =
+          Simulation_state.set_trails state_with_bodies []
+        in
+        let state_with_anims =
+          Simulation_state.set_collision_anims state_with_trails []
+        in
+        (* Mark current params as applied *)
+        Simulation_state.apply_params state_with_anims
+      end
+      else begin
+        (* For other scenarios, reload from definition (no custom params) *)
+        let scenario = Scenario.get_scenario_by_name scenario_name in
+        let state_with_bodies =
+          Simulation_state.set_world state_after_scenario scenario.bodies
+        in
+        let state_with_trails =
+          Simulation_state.set_trails state_with_bodies []
+        in
+        let state_with_anims =
+          Simulation_state.set_collision_anims state_with_trails []
+        in
+        (* Reset params to match the scenario's initial bodies *)
+        (* Always pad to 3 params for UI consistency *)
+        let body_params =
+          List.map
+            (fun body -> (Body.density body, Body.radius body))
+            scenario.bodies
+        in
+        let default_param = (3e10, 18.) in
+        let reset_params =
+          match body_params with
+          | [] -> [ default_param; default_param; default_param ]
+          | [ p1 ] -> [ p1; default_param; default_param ]
+          | [ p1; p2 ] -> [ p1; p2; default_param ]
+          | p1 :: p2 :: p3 :: _ -> [ p1; p2; p3 ]
+        in
+        {
+          state_with_anims with
+          pending_params = reset_params;
+          applied_params = reset_params;
+        }
+      end
     end
     else state_after_scenario
   in
@@ -145,7 +184,26 @@ and load_scenario_by_index state index =
     let scenario_name = List.nth Scenario.all_scenarios index in
     let scenario = Scenario.get_scenario_by_name scenario_name in
     let state_loaded = Simulation_state.load_scenario state scenario.name in
-    Simulation_state.set_world state_loaded scenario.bodies
+    let state_with_bodies = Simulation_state.set_world state_loaded scenario.bodies in
+    (* Update params to match the new scenario, padding to 3 entries *)
+    let body_params =
+      List.map
+        (fun body -> (Body.density body, Body.radius body))
+        scenario.bodies
+    in
+    let default_param = (3e10, 18.) in
+    let reset_params =
+      match body_params with
+      | [] -> [ default_param; default_param; default_param ]
+      | [ p1 ] -> [ p1; default_param; default_param ]
+      | [ p1; p2 ] -> [ p1; p2; default_param ]
+      | p1 :: p2 :: p3 :: _ -> [ p1; p2; p3 ]
+    in
+    {
+      state_with_bodies with
+      pending_params = reset_params;
+      applied_params = reset_params;
+    }
   else state
 
 (** Extract params as tuple for scenario creation *)
@@ -164,7 +222,10 @@ and update_physics_step state =
     List.map
       (fun body ->
         let r, g, b, a = Group90.Body.color body in
-        (int_of_float r, int_of_float g, int_of_float b, int_of_float a))
+        let clamp_to_byte x =
+          int_of_float (Float.max 0. (Float.min 255. x))
+        in
+        (clamp_to_byte r, clamp_to_byte g, clamp_to_byte b, clamp_to_byte a))
       state.Simulation_state.world
   in
 
@@ -224,14 +285,17 @@ and render_frame state camera =
         Simulation_state.get_trail_render_info trail current_time
       in
       if List.length positions > 0 then begin
-        (* Get color from corresponding body if available, otherwise use default *)
+        (* Get color from corresponding body if available, otherwise use
+           default *)
         let r, g, b, base_alpha =
           if i < List.length state.world then
             let body = List.nth state.world i in
             let r, g, b, a = Group90.Body.color body in
-            (int_of_float r, int_of_float g, int_of_float b, 100)
-          else
-            (200, 200, 200, 100)
+            let clamp_to_byte x =
+              int_of_float (Float.max 0. (Float.min 255. x))
+            in
+            (clamp_to_byte r, clamp_to_byte g, clamp_to_byte b, 100)
+          else (200, 200, 200, 100)
         in
         let faded_alpha = int_of_float (float_of_int base_alpha *. alpha) in
         let trail_color = Ui.color r g b faded_alpha in

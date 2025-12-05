@@ -23,7 +23,10 @@ let dark_gray = color 40 40 40 255
 
 (* Get color for a body - converts Body.color tuple to Raylib Color *)
 let body_color_to_raylib (r, g, b, a) =
-  color (int_of_float r) (int_of_float g) (int_of_float b) (int_of_float a)
+  let clamp_to_byte x =
+    int_of_float (Float.max 0. (Float.min 255. x))
+  in
+  color (clamp_to_byte r) (clamp_to_byte g) (clamp_to_byte b) (clamp_to_byte a)
 
 (* Get color for a body based on the body itself *)
 let get_body_color_from_body body =
@@ -139,8 +142,8 @@ let draw_ui is_colliding time_scale paused planet_params has_changes
         draw_text "(merged)" (sidebar_x + 95) base_y 10 (color 150 150 150 255);
       draw_circle (sidebar_x + 25) (base_y + 25) 8. col;
 
-      (* Density slider with centered range *)
-      draw_slider (sidebar_x + 50) (base_y + 60) 130 density 1e10 6e10 "Density";
+      (* Density slider with wider range to accommodate all scenarios *)
+      draw_slider (sidebar_x + 50) (base_y + 60) 130 density 1e9 1e11 "Density";
 
       (* Radius slider *)
       draw_slider (sidebar_x + 50) (base_y + 110) 130 radius 10. 40. "Radius";
