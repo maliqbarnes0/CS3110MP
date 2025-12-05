@@ -140,24 +140,26 @@ and handle_slider_input state =
   let slider_start_y = sidebar_y + 90 in
   let selected_idx = state.Simulation_state.selected_planet in
 
-  (* Handle density slider *)
+  (* Handle density slider (UI scale 1-20) *)
   let state_after_density =
     match
-      Ui.check_slider_drag (sidebar_x + 20) slider_start_y 130 1e9 1e11
+      Ui.check_slider_drag (sidebar_x + 20) slider_start_y 130 1. 20.
     with
-    | Some new_density ->
-        Simulation_state.update_planet_density state selected_idx new_density
+    | Some ui_density ->
+        let actual_density = Ui.ui_scale_to_density ui_density in
+        Simulation_state.update_planet_density state selected_idx actual_density
     | None -> state
   in
 
-  (* Handle radius slider *)
+  (* Handle radius slider (UI scale 1-20) *)
   let state_after_radius =
     match
-      Ui.check_slider_drag (sidebar_x + 20) (slider_start_y + 70) 130 10. 40.
+      Ui.check_slider_drag (sidebar_x + 20) (slider_start_y + 70) 130 1. 20.
     with
-    | Some new_radius ->
+    | Some ui_radius ->
+        let actual_radius = Ui.ui_scale_to_radius ui_radius in
         Simulation_state.update_planet_radius state_after_density selected_idx
-          new_radius
+          actual_radius
     | None -> state_after_density
   in
 

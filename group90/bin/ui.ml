@@ -46,6 +46,33 @@ let blend_colors c1 c2 =
   let b = (Color.b c1 + Color.b c2) / 2 in
   color r g b 255
 
+(* Conversion functions between UI scale (1-20) and actual values *)
+(* Density: map 1-20 to 1e9-1e11 *)
+let density_to_ui_scale density =
+  let min_density = 1e9 in
+  let max_density = 1e11 in
+  let normalized = (density -. min_density) /. (max_density -. min_density) in
+  1.0 +. (normalized *. 19.0)
+
+let ui_scale_to_density ui_value =
+  let min_density = 1e9 in
+  let max_density = 1e11 in
+  let normalized = (ui_value -. 1.0) /. 19.0 in
+  min_density +. (normalized *. (max_density -. min_density))
+
+(* Radius: map 1-20 to 10-40 *)
+let radius_to_ui_scale radius =
+  let min_radius = 10.0 in
+  let max_radius = 40.0 in
+  let normalized = (radius -. min_radius) /. (max_radius -. min_radius) in
+  1.0 +. (normalized *. 19.0)
+
+let ui_scale_to_radius ui_value =
+  let min_radius = 10.0 in
+  let max_radius = 40.0 in
+  let normalized = (ui_value -. 1.0) /. 19.0 in
+  min_radius +. (normalized *. (max_radius -. min_radius))
+
 (* Slider helper functions *)
 let draw_slider x y width value min_val max_val label =
   let slider_height = 6 in
@@ -69,11 +96,8 @@ let draw_slider x y width value min_val max_val label =
 
   (* Label and value *)
   draw_text label x (y - 18) 12 (color 200 200 220 255);
-  (* Format value appropriately - use scientific notation for large values *)
-  let value_str =
-    if value > 1e9 then Printf.sprintf "%.1e" value
-    else Printf.sprintf "%.1f" value
-  in
+  (* Display value as simple number (1 decimal place) *)
+  let value_str = Printf.sprintf "%.1f" value in
   draw_text value_str (x + width + 10) (y - 2) 10 white
 
 let check_slider_drag x y width min_val max_val =
@@ -207,11 +231,15 @@ let draw_sidebar selected_planet_idx planet_params world num_alive =
   (* Sliders *)
   let slider_start_y = sidebar_y + 90 in
 
+  (* Convert actual values to UI scale (1-20) *)
+  let density_ui = density_to_ui_scale density in
+  let radius_ui = radius_to_ui_scale radius in
+
   (* Density slider *)
-  draw_slider (sidebar_x + 20) slider_start_y 130 density 1e9 1e11 "Density";
+  draw_slider (sidebar_x + 20) slider_start_y 130 density_ui 1. 20. "Density";
 
   (* Radius slider *)
-  draw_slider (sidebar_x + 20) (slider_start_y + 70) 130 radius 10. 40.
+  draw_slider (sidebar_x + 20) (slider_start_y + 70) 130 radius_ui 1. 20.
     "Radius";
 
   (* Info text *)
