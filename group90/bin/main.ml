@@ -1,14 +1,3 @@
-(** Main entry point for the 3D Gravity Simulation.
-
-    This module initializes the application window, sets up the initial camera,
-    and bootstraps the simulation. It delegates to:
-    - render.ml: For star initialization and 3D rendering
-    - simulation.ml: For the main physics and game loop
-    - ui.ml: For 2D interface elements
-
-    Flow: Window setup → Star generation → Camera initialization → Start
-    simulation loop → Exit screen *)
-
 open Raylib
 open Unix
 

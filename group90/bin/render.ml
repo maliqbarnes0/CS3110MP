@@ -1,13 +1,11 @@
 open Raylib
 open Group90
 
-(* Render scale: physics coordinates to visual coordinates *)
-let render_scale = 0.1 (* 1 physics unit = 0.1 render units *)
+let render_scale = 0.1
 
 (* Trail configuration *)
 let max_trail_length = 120 (* Number of positions to keep in trail *)
 
-(* Trail type: list of Vec3 positions for each body *)
 type trails = Vec3.v list list
 
 (* Collision animation type *)
@@ -21,7 +19,6 @@ type collision_animation = {
 
 type collision_animations = collision_animation list
 
-(* Generate stars once at initialization *)
 let stars = ref []
 
 let initialize_stars () =
@@ -45,7 +42,7 @@ let initialize_stars () =
 let draw_starbox camera =
   let cam_pos = Camera3D.position camera in
 
-  (* Draw the starbox - stars follow camera *)
+  (* Draw the starbox *)
   List.iter
     (fun (x, y, z, brightness, size) ->
       let star_pos =
@@ -133,7 +130,6 @@ let draw_trail trail trail_color =
             (render_scale *. Vec3.y p2)
             (render_scale *. Vec3.z p2)
         in
-        (* Draw thicker lines by drawing small spheres at each position *)
         draw_sphere pos1 (1.5 *. render_scale) trail_color;
         draw_line_3d pos1 pos2 trail_color;
         draw_segments (p2 :: rest)
@@ -161,7 +157,6 @@ let update_trails trails world collision_pairs =
     in
     (new_trails, collision_pairs)
 
-(* Draw collision animation as simple expanding burst *)
 let draw_collision_animation anim current_time =
   let elapsed = current_time -. anim.start_time in
   if elapsed < anim.duration then begin
@@ -178,7 +173,6 @@ let draw_collision_animation anim current_time =
     let g = Color.g anim.color in
     let b = Color.b anim.color in
 
-    (* Single expanding sphere that fades out *)
     let alpha = int_of_float (255. *. (1. -. progress)) in
     let radius = anim.max_radius *. progress *. render_scale in
 
@@ -192,77 +186,12 @@ let update_collision_animations anims current_time =
     (fun anim -> current_time -. anim.start_time < anim.duration)
     anims
 
-(* Draw 3D axis indicators and grid planes at origin *)
-let draw_axes () =
-  let axis_length = 150. in
-  let grid_size = 400. in
-  let grid_spacing = 50. in
-  let grid_color = Ui.color 40 40 40 255 in
-
-  (* Main axis lines - brighter *)
-  (* X axis - Red *)
-  let x_start = Vector3.create (-.axis_length) 0. 0. in
-  let x_end = Vector3.create axis_length 0. 0. in
-  draw_line_3d x_start x_end (Ui.color 255 80 80 255);
-
-  (* Y axis - Green *)
-  let y_start = Vector3.create 0. (-.axis_length) 0. in
-  let y_end = Vector3.create 0. axis_length 0. in
-  draw_line_3d y_start y_end (Ui.color 80 255 80 255);
-
-  (* Z axis - Blue *)
-  let z_start = Vector3.create 0. 0. (-.axis_length) in
-  let z_end = Vector3.create 0. 0. axis_length in
-  draw_line_3d z_start z_end (Ui.color 80 80 255 255);
-
-  (* Grid lines on YZ plane (X = 0) *)
-  let num_lines = int_of_float (grid_size /. grid_spacing) in
-  for i = -num_lines to num_lines do
-    let offset = float_of_int i *. grid_spacing in
-    (* Horizontal lines (parallel to Z) *)
-    let start_z = Vector3.create 0. offset (-.grid_size /. 2.) in
-    let end_z = Vector3.create 0. offset (grid_size /. 2.) in
-    draw_line_3d start_z end_z grid_color;
-    (* Vertical lines (parallel to Y) *)
-    let start_y = Vector3.create 0. (-.grid_size /. 2.) offset in
-    let end_y = Vector3.create 0. (grid_size /. 2.) offset in
-    draw_line_3d start_y end_y grid_color
-  done;
-
-  (* Grid lines on XZ plane (Y = 0) *)
-  for i = -num_lines to num_lines do
-    let offset = float_of_int i *. grid_spacing in
-    (* Lines parallel to X *)
-    let start_x = Vector3.create (-.grid_size /. 2.) 0. offset in
-    let end_x = Vector3.create (grid_size /. 2.) 0. offset in
-    draw_line_3d start_x end_x grid_color;
-    (* Lines parallel to Z *)
-    let start_z = Vector3.create offset 0. (-.grid_size /. 2.) in
-    let end_z = Vector3.create offset 0. (grid_size /. 2.) in
-    draw_line_3d start_z end_z grid_color
-  done;
-
-  (* Grid lines on XY plane (Z = 0) *)
-  for i = -num_lines to num_lines do
-    let offset = float_of_int i *. grid_spacing in
-    (* Lines parallel to X *)
-    let start_x = Vector3.create (-.grid_size /. 2.) offset 0. in
-    let end_x = Vector3.create (grid_size /. 2.) offset 0. in
-    draw_line_3d start_x end_x grid_color;
-    (* Lines parallel to Y *)
-    let start_y = Vector3.create offset (-.grid_size /. 2.) 0. in
-    let end_y = Vector3.create offset (grid_size /. 2.) 0. in
-    draw_line_3d start_y end_y grid_color
-  done
-
 (* Calculate collision point between two bodies *)
 let calc_collision_point b1 b2 =
   let pos1 = Body.pos b1 in
   let pos2 = Body.pos b2 in
   let r1 = Body.radius b1 in
   let r2 = Body.radius b2 in
-  (* Calculate collision point: weighted by radii to be on the surface where
-     they touch *)
   let total_r = r1 +. r2 in
   let weight1 = r1 /. total_r in
   let weight2 = r2 /. total_r in

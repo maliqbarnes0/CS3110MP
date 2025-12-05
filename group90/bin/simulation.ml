@@ -188,8 +188,9 @@ and handle_keyboard_input state =
         }
       end
       (* For all other scenarios (1, 3-6), use current slider values *)
-      else begin
-        (* For Three-Body Problem, use the specialized function with custom params *)
+        else begin
+        (* For Three-Body Problem, use the specialized function with custom
+           params *)
         if scenario_name = "Three-Body Problem" then begin
           let new_bodies =
             Scenario.create_three_body_system
@@ -210,17 +211,22 @@ and handle_keyboard_input state =
           in
           Simulation_state.apply_params state_with_anims
         end
-        (* For scenarios 3-6, reload base scenario then update bodies with slider values *)
-        else begin
+        (* For scenarios 3-6, reload base scenario then update bodies with
+           slider values *)
+          else begin
           let scenario = Scenario.get_scenario_by_name scenario_name in
           (* Update existing bodies with slider values *)
           let updated_bodies =
             List.mapi
               (fun i body ->
-                if i < List.length state_after_scenario.Simulation_state.pending_params
+                if
+                  i
+                  < List.length
+                      state_after_scenario.Simulation_state.pending_params
                 then begin
                   let new_density, new_radius =
-                    List.nth state_after_scenario.Simulation_state.pending_params i
+                    List.nth
+                      state_after_scenario.Simulation_state.pending_params i
                   in
                   (* Recreate body with updated density and radius *)
                   Body.make ~density:new_density ~pos:(Body.pos body)
