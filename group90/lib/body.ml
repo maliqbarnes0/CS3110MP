@@ -1,5 +1,23 @@
 type color = float * float * float * float
 
+(**
+   Abstraction Function (AF):
+   The record {density; pos; vel; radius; mass; color} represents a spherical
+   celestial body with:
+   - density !density (kg/m³)
+   - position pos (meters in 3D space)
+   - velocity vel (meters/second in 3D space)
+   - radius !radius (meters)
+   - mass !mass (kilograms), calculated from density and radius
+   - color (r, g, b, a) where each component is 0-255
+
+   Representation Invariant (RI):
+   - !density > 0.0 (positive density)
+   - !radius > 0.0 (positive radius)
+   - !mass = (4/3) * π * (!radius)³ * !density (mass consistent with density and radius)
+   - For color (r, g, b, a): 0.0 <= r, g, b, a <= 255.0
+   - pos and vel are valid Vec3.v values (no NaN components)
+*)
 type b = {
   density : float ref;
   pos : Vec3.v;

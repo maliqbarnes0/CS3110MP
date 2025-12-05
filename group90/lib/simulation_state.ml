@@ -31,6 +31,33 @@ type trail_state =
       orphaned_at : float;
     }
 
+(**
+   Abstraction Function (AF):
+   The record {world; trails; collision_anims; time_scale; paused; pending_params;
+   applied_params; current_scenario; sidebar_visible; selected_planet} represents
+   the complete state of the N-body simulation:
+   - world: list of currently existing celestial bodies
+   - trails: position history for each body (Active) or fading trails for removed
+     bodies (Orphaned with timestamp)
+   - collision_anims: ongoing visual effects for recent collisions
+   - time_scale: speed multiplier for physics simulation (1.0 = real-time)
+   - paused: whether physics updates are frozen
+   - pending_params: current UI slider values as (density, radius) pairs
+   - applied_params: last committed parameter values for reset functionality
+   - current_scenario: name of the loaded scenario
+   - sidebar_visible: whether the planet editor UI is shown
+   - selected_planet: index of planet being edited (0-2)
+
+   Representation Invariant (RI):
+   - time_scale > 0.0 (positive time scaling)
+   - For each (density, radius) in pending_params and applied_params:
+     density > 0.0 and radius > 0.0
+   - Length of trails <= max(length of world, historical max body count)
+   - For each collision_anim: duration > 0.0, max_radius > 0.0
+   - For Orphaned trails: orphaned_at is a valid Unix timestamp
+   - 0 <= selected_planet < 3 (always 3 planet slots)
+   - All bodies in world satisfy Body.b representation invariant
+*)
 type t = {
   world : Body.b list;
   trails : trail_state list;
