@@ -50,6 +50,8 @@ dune exec group90
 - **Z** - Speed up time (1.5x multiplier, max 20x)
 - **X** - Slow down time (1.5x divisor, min 0.1x)
 - **R** - Reset current scenario
+  - Scenarios 1, 3-5: Resets with current slider values
+  - Scenario 2 (Randomized): Generates fresh random bodies
 
 ### Scenario Selection
 - **1** - Three-Body Problem (binary star system with interloper)
@@ -57,7 +59,6 @@ dune exec group90
 - **3** - Binary Star (two stars in stable circular orbit)
 - **4** - Solar System (central star with two orbiting planets)
 - **5** - Collision Course (two bodies heading for collision)
-- **6** - Figure-8 Orbit (chaotic three-body figure-8 configuration)
 
 ### Planet Editing
 - **Click on a planet** - Select planet and open sidebar editor
@@ -86,7 +87,7 @@ dune exec group90
 - Collapsible sidebar for planet parameter editing
 - Bottom-left instructions panel showing:
   - Current scenario
-  - Available scenarios (1-6)
+  - Available scenarios (1-5)
   - Speed control display
   - Pause/Resume status
 - Real-time parameter adjustment with interactive sliders

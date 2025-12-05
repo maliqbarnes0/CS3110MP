@@ -43,7 +43,7 @@ main.ml (Entry Point)
   - Handles user input for:
     - Speed control (Z/X keys: min 0.1x, max 20x)
     - Pause/resume (P key)
-    - Scenario switching (1-6 keys for 6 different scenarios)
+    - Scenario switching (1-5 keys for 5 different scenarios)
     - Reset current scenario (R key)
     - Slider interactions for planet density and radius (UI scale 1-20)
     - Planet selection via mouse click with raycasting
@@ -146,7 +146,7 @@ main.ml (Entry Point)
    - Checks radius slider drag → converts UI scale to actual radius
    - Updates state via `Simulation_state.update_planet_*` functions
 3. **simulation.ml** handles keyboard input:
-   - Scenario switching (1-6 keys) → loads new scenario
+   - Scenario switching (1-5 keys) → loads new scenario
    - Reset (R key) → reloads current scenario
    - Time scale (Z/X keys) → adjusts speed
    - Pause (P key) → toggles pause state
@@ -343,7 +343,7 @@ All camera state is immutable and passed to the next frame.
 | 4 | simulation.ml | Load Solar System scenario |
 | 5 | simulation.ml | Load Collision Course scenario |
 | 6 | simulation.ml | Load Figure-8 Orbit scenario |
-| R | simulation.ml | Reset current scenario |
+| R | simulation.ml | Reset scenario (1,3-6: uses slider values; 2: new random) |
 | P | simulation.ml | Pause/Resume simulation |
 | Z | simulation.ml | Increase speed (1.5x, max 20x) |
 | X | simulation.ml | Decrease speed (1.5x, min 0.1x) |
@@ -379,7 +379,7 @@ The simulation uses several backend modules from the `Group90` library:
   3. Binary Star (stable circular orbit)
   4. Solar System (central star + 2 planets)
   5. Collision Course (head-on collision)
-  6. Figure-8 Orbit (chaotic figure-8)
+  6. Figure-8 Orbit (Chenciner-Montgomery figure-8 choreography)
 - Provides `create_three_body_system` with optional custom parameters
 - Calculates orbital velocities and stable configurations
 
