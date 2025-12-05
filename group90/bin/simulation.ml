@@ -1,18 +1,3 @@
-(** Frontend simulation module - handles rendering and user interaction.
-
-    This module is responsible for:
-    - Main game loop coordination
-    - User input processing (keyboard, mouse, sliders)
-    - Camera management
-    - Rendering orchestration
-    - UI event handling
-    - Planet selection and sidebar management
-
-    Backend logic lives in the lib folder:
-    - Simulation_state: state management
-    - Physics_system: physics calculations
-    - Scenario: scenario creation *)
-
 open Raylib
 open Group90
 
@@ -21,14 +6,14 @@ let rec simulation_loop state camera theta phi radius =
   (* Handle UI button interactions *)
   let state_after_ui_buttons = handle_ui_buttons state in
 
-  (* Handle slider interactions for planet parameters (only if sidebar visible) *)
+  (* Handle slider interactions for planet parameters *)
   let state_after_sliders =
     if state_after_ui_buttons.Simulation_state.sidebar_visible then
       handle_slider_input state_after_ui_buttons
     else state_after_ui_buttons
   in
 
-  (* Handle keyboard input for simulation control *)
+  (* Handle keyboard input *)
   let state_after_keyboard = handle_keyboard_input state_after_sliders in
 
   (* Handle planet selection *)
@@ -36,14 +21,13 @@ let rec simulation_loop state camera theta phi radius =
     handle_planet_selection state_after_keyboard camera
   in
 
-  (* Update physics if not paused *)
   let state_after_physics =
     if state_after_planet_selection.Simulation_state.paused then
       state_after_planet_selection
     else update_physics_step state_after_planet_selection
   in
 
-  (* Update camera based on input (only if not over UI) *)
+  (* Update camera via dragging *)
   let new_camera, new_theta, new_phi, new_radius =
     if Ui.mouse_over_ui state_after_physics.sidebar_visible then
       (camera, theta, phi, radius)
@@ -55,19 +39,17 @@ let rec simulation_loop state camera theta phi radius =
 
   if should_exit then ()
   else begin
-    (* Render everything *)
     render_frame state_after_physics new_camera;
 
-    (* Frame timing *)
+    (* Framerate *)
     Unix.sleepf 0.016;
 
-    (* Continue loop *)
+    (* Loop *)
     simulation_loop state_after_physics new_camera new_theta new_phi new_radius
   end
 
 (** Handle UI button interactions *)
 and handle_ui_buttons state =
-  (* Check sidebar close button *)
   let state_after_close =
     if
       Ui.check_sidebar_close_button () && state.Simulation_state.sidebar_visible
@@ -75,7 +57,6 @@ and handle_ui_buttons state =
     else state
   in
 
-  (* Check arrow buttons *)
   let state_after_arrows =
     if state_after_close.Simulation_state.sidebar_visible then begin
       if Ui.check_left_arrow () then
@@ -89,9 +70,7 @@ and handle_ui_buttons state =
 
   state_after_arrows
 
-(** Handle planet selection via mouse click *)
 and handle_planet_selection state camera =
-  (* Only process clicks if not over UI *)
   if
     is_mouse_button_pressed MouseButton.Left
     && not (Ui.mouse_over_ui state.Simulation_state.sidebar_visible)
@@ -105,7 +84,6 @@ and handle_planet_selection state camera =
         (fun acc_idx (i, body) ->
           match acc_idx with
           | Some _ -> acc_idx
-          (* Already found a closer hit *)
           | None ->
               let body_pos = Body.pos body in
               let render_scale = 0.1 in
@@ -133,25 +111,20 @@ and handle_planet_selection state camera =
     | None -> state
   else state
 
-(** Handle slider input for adjusting planet parameters *)
+(** Handle slider input for params *)
 and handle_slider_input state =
   let sidebar_x = 560 in
   let sidebar_y = 50 in
   let slider_start_y = sidebar_y + 90 in
   let selected_idx = state.Simulation_state.selected_planet in
 
-  (* Handle density slider (UI scale 1-20) *)
   let state_after_density =
-    match
-      Ui.check_slider_drag (sidebar_x + 20) slider_start_y 130 1. 20.
-    with
+    match Ui.check_slider_drag (sidebar_x + 20) slider_start_y 130 1. 20. with
     | Some ui_density ->
         let actual_density = Ui.ui_scale_to_density ui_density in
         Simulation_state.update_planet_density state selected_idx actual_density
     | None -> state
   in
-
-  (* Handle radius slider (UI scale 1-20) *)
   let state_after_radius =
     match
       Ui.check_slider_drag (sidebar_x + 20) (slider_start_y + 70) 130 1. 20.
@@ -167,7 +140,7 @@ and handle_slider_input state =
 
 (** Handle keyboard input for simulation control *)
 and handle_keyboard_input state =
-  (* Check for scenario switching (1-5 keys) *)
+  (* Scenario switching *)
   let state_after_scenario =
     if is_key_pressed Key.One then load_scenario_by_index state 0
     else if is_key_pressed Key.Two then load_scenario_by_index state 1
@@ -177,7 +150,7 @@ and handle_keyboard_input state =
     else state
   in
 
-  (* Check for reset (R key) - reset current scenario *)
+  (* Check for reset *)
   let state_after_reset =
     if is_key_pressed Key.R then begin
       let scenario_name =
@@ -195,7 +168,6 @@ and handle_keyboard_input state =
         let state_with_anims =
           Simulation_state.set_collision_anims state_with_trails []
         in
-        (* Reset params to match the new random bodies *)
         let body_params =
           List.map
             (fun body -> (Body.density body, Body.radius body))
@@ -274,7 +246,6 @@ and handle_keyboard_input state =
     else state_after_scenario
   in
 
-  (* Check for time scale adjustments (Z and X keys) *)
   let state_after_timescale =
     if is_key_pressed Key.Z then
       Simulation_state.set_time_scale state_after_reset
@@ -285,12 +256,11 @@ and handle_keyboard_input state =
     else state_after_reset
   in
 
-  (* Check for pause toggle (P key) *)
+  (* Check for pause *)
   if is_key_pressed Key.P then
     Simulation_state.toggle_pause state_after_timescale
   else state_after_timescale
 
-(** Load a scenario by index *)
 and load_scenario_by_index state index =
   if index >= 0 && index < List.length Scenario.all_scenarios then
     let scenario_name = List.nth Scenario.all_scenarios index in
@@ -299,7 +269,6 @@ and load_scenario_by_index state index =
     let state_with_bodies =
       Simulation_state.set_world state_loaded scenario.bodies
     in
-    (* Update params to match the new scenario, padding to 3 entries *)
     let body_params =
       List.map
         (fun body -> (Body.density body, Body.radius body))
@@ -320,7 +289,7 @@ and load_scenario_by_index state index =
     }
   else state
 
-(** Extract params as tuple for scenario creation *)
+(** Extract params *)
 and extract_params_tuple params_list =
   match params_list with
   | (d1, r1) :: (d2, r2) :: (d3, r3) :: _ -> (d1, r1, d2, r2, d3, r3)
@@ -328,17 +297,13 @@ and extract_params_tuple params_list =
 
 (** Update physics for one step *)
 and update_physics_step state =
-  (* Get current time for animations *)
   let current_time = Unix.gettimeofday () in
 
-  (* Store old body colors before physics update as RGBA tuples *)
   let old_body_colors =
     List.map
       (fun body ->
         let r, g, b, a = Group90.Body.color body in
-        let clamp_to_byte x =
-          int_of_float (Float.max 0. (Float.min 255. x))
-        in
+        let clamp_to_byte x = int_of_float (Float.max 0. (Float.min 255. x)) in
         (clamp_to_byte r, clamp_to_byte g, clamp_to_byte b, clamp_to_byte a))
       state.Simulation_state.world
   in
@@ -361,7 +326,6 @@ and update_physics_step state =
       current_time
   in
 
-  (* Prune empty orphaned trails *)
   let state_pruned = Simulation_state.prune_empty_trails state_with_trails in
 
   (* Add collision animations if any collisions occurred *)
@@ -375,23 +339,18 @@ and update_physics_step state =
   (* Remove expired animations *)
   Simulation_state.prune_expired_animations state_with_collisions current_time
 
-(** Render a single frame *)
+(** Render a frame *)
 and render_frame state camera =
   begin_drawing ();
   clear_background (Ui.color 5 5 15 255);
 
-  (* Dark space background *)
-
-  (* Restrict 3D rendering to full screen (no permanent sidebar) *)
   begin_scissor_mode 0 0 800 600;
 
-  (* 3D rendering *)
   begin_mode_3d camera;
 
-  (* Draw starbox background *)
+  (* Draw starbox *)
   Render.draw_starbox camera;
 
-  (* Draw trails with fading for orphaned trails *)
   let current_time = Unix.gettimeofday () in
   List.iteri
     (fun i trail ->
@@ -417,14 +376,12 @@ and render_frame state camera =
       end)
     state.Simulation_state.trails;
 
-  (* Draw bodies - get colors from body data *)
+  (* Draw bodies *)
   let body_colors = List.map Ui.get_body_color_from_body state.world in
   List.iter2 Render.draw_body state.world body_colors;
 
-  (* Draw collision animations *)
   let current_time = Unix.gettimeofday () in
   let render_scale = 0.1 in
-  (* Match render.ml's render_scale *)
   List.iter
     (fun anim ->
       let age = current_time -. anim.Simulation_state.start_time in
@@ -447,10 +404,10 @@ and render_frame state camera =
   end_mode_3d ();
   end_scissor_mode ();
 
-  (* Draw 2D UI overlay *)
   let is_colliding = Physics_system.is_colliding state.world in
   let has_changes = Simulation_state.has_pending_changes state in
   let num_alive = Simulation_state.num_bodies state in
+  (* Draw 2D UI overlay *)
   Ui.draw_ui is_colliding state.time_scale state.paused state.pending_params
     has_changes num_alive state.current_scenario state.world
     state.sidebar_visible state.selected_planet;
