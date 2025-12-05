@@ -215,7 +215,7 @@ and handle_keyboard_input state =
           applied_params = reset_params;
         }
       end
-      (* For all other scenarios (1, 3-6), use current slider values *)
+      (* For all other scenarios (1, 3, 5), use current slider values *)
       else begin
         (* For Three-Body Problem, use the specialized function with custom params *)
         if scenario_name = "Three-Body Problem" then begin
@@ -238,7 +238,39 @@ and handle_keyboard_input state =
           in
           Simulation_state.apply_params state_with_anims
         end
-        (* For scenarios 3-6, reload base scenario then update bodies with slider values *)
+        (* For scenarios 4 and 5 (Solar System, Collision Course), reset to initial values *)
+        else if scenario_name = "Solar System" || scenario_name = "Collision Course" then begin
+          let scenario = Scenario.get_scenario_by_name scenario_name in
+          let state_with_bodies =
+            Simulation_state.set_world state_after_scenario scenario.bodies
+          in
+          let state_with_trails =
+            Simulation_state.set_trails state_with_bodies []
+          in
+          let state_with_anims =
+            Simulation_state.set_collision_anims state_with_trails []
+          in
+          (* Reset params to initial scenario values *)
+          let body_params =
+            List.map
+              (fun body -> (Body.density body, Body.radius body))
+              scenario.bodies
+          in
+          let default_param = (3e10, 18.) in
+          let reset_params =
+            match body_params with
+            | [] -> [ default_param; default_param; default_param ]
+            | [ p1 ] -> [ p1; default_param; default_param ]
+            | [ p1; p2 ] -> [ p1; p2; default_param ]
+            | p1 :: p2 :: p3 :: _ -> [ p1; p2; p3 ]
+          in
+          {
+            state_with_anims with
+            pending_params = reset_params;
+            applied_params = reset_params;
+          }
+        end
+        (* For scenario 3 (Binary Star), reload base scenario then update bodies with slider values *)
         else begin
           let scenario = Scenario.get_scenario_by_name scenario_name in
           (* Update existing bodies with slider values *)
