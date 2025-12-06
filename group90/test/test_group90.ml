@@ -163,6 +163,198 @@ let test_find_collisions_one_pair _ =
   let collisions = Engine.find_collisions [ b1; b2; b3 ] in
   assert_equal 1 (List.length collisions)
 
+  (* ---------- Scenario Tests ---------- *)
+
+let test_scenario_calculate_mass_basic _ =
+  let density = 2.0 in
+  let radius = 3.0 in
+  let expected =
+    4.0 /. 3.0 *. Float.pi *. (radius ** 3.0) *. density
+  in
+  let actual = Scenario.calculate_mass ~density ~radius in
+  approx_equal expected actual
+
+let test_scenario_get_by_name_known_names _ =
+  List.iter
+    (fun name ->
+      let s = Scenario.get_scenario_by_name name in
+      assert_equal
+        ~printer:(fun s -> s)
+        name s.Scenario.name)
+    Scenario.all_scenarios
+
+let test_scenario_get_by_name_unknown_uses_default _ =
+  let s = Scenario.get_scenario_by_name "Not A Real Scenario" in
+  (* default_scenario name *)
+  assert_equal
+    ~printer:(fun s -> s)
+    "Three-Body Problem" s.Scenario.name
+
+let test_scenario_collision_course_two_bodies _ =
+  let s = Scenario.get_scenario_by_name "Collision Course" in
+  assert_equal 2 (List.length s.Scenario.bodies)
+
+  (* ---------- Simulation_state Tests ---------- *)
+
+let test_state_initial_defaults _ =
+  let st = Simulation_state.create_initial () in
+  approx_equal 1.0 st.time_scale;
+  assert_bool "initial not paused" (not st.paused);
+  assert_equal
+    ~printer:(fun s -> s)
+    "Three-Body Problem" st.current_scenario;
+  assert_equal 0 (Simulation_state.num_bodies st);
+  assert_bool "no pending changes initially"
+    (not (Simulation_state.has_pending_changes st))
+
+let test_state_time_scale_and_pause _ =
+  let st0 = Simulation_state.create_initial () in
+  let st1 = Simulation_state.set_time_scale st0 2.5 in
+  approx_equal 2.5 st1.time_scale;
+  let st2 = Simulation_state.toggle_pause st1 in
+  assert_bool "paused after toggle" st2.paused
+
+let test_state_pending_changes_after_update _ =
+  let st0 = Simulation_state.create_initial () in
+  let st1 = Simulation_state.update_planet_density st0 0 9.99e9 in
+  assert_bool "now has pending changes"
+    (Simulation_state.has_pending_changes st1);
+  (* pending_params[0] density should be updated *)
+  let d1, _r1 = List.nth st1.pending_params 0 in
+  approx_equal 9.99e9 d1
+
+let test_state_apply_params_clears_pending _ =
+  let st0 = Simulation_state.create_initial () in
+  let st1 = Simulation_state.update_planet_radius st0 1 30.0 in
+  assert_bool "pending before apply"
+    (Simulation_state.has_pending_changes st1);
+  let st2 = Simulation_state.apply_params st1 in
+  assert_bool "no pending after apply"
+    (not (Simulation_state.has_pending_changes st2));
+  (* applied_params should match pending_params *)
+  assert_equal st2.pending_params st2.applied_params
+
+let test_state_cycle_selected_planet_wraps _ =
+  let st0 = Simulation_state.create_initial () in
+  assert_equal 0 st0.selected_planet;
+  let st1 = Simulation_state.cycle_selected_planet st0 (-1) in
+  (* (0 - 1 + 3) mod 3 = 2 *)
+  assert_equal 2 st1.selected_planet;
+  let st2 = Simulation_state.cycle_selected_planet st1 1 in
+  assert_equal 0 st2.selected_planet
+
+let test_state_trail_render_info_active_and_orphaned _ =
+  let p1 = vec 0. 0. 0. in
+  let active = Simulation_state.Active [ p1 ] in
+  let positions_a, alpha_a =
+    Simulation_state.get_trail_render_info active 10.0
+  in
+  assert_equal 1 (List.length positions_a);
+  approx_equal 1.0 alpha_a;
+  let orphaned =
+    Simulation_state.Orphaned { positions = [ p1 ]; orphaned_at = 0.0 }
+  in
+  let _positions_o, alpha_o =
+    Simulation_state.get_trail_render_info orphaned 1.0
+  in
+  (* alpha_o should be between 0 and 1 *)
+  assert_bool "orphaned alpha in (0,1]"
+    (alpha_o <= 1.0 && alpha_o >= 0.0)
+
+    (* ---------- Physics_system Tests ---------- *)
+
+let test_physics_update_small_time_scale_single_step _ =
+  let b =
+    make_body ~pos:(vec 0. 0. 0.) ~vel:(vec 1. 0. 0.) ~mass:1. ()
+  in
+  let world0 = [ b ] in
+  let time_scale = 0.5 in
+  let dt = time_scale *. Physics_system.fixed_dt in
+  let world1, collisions1 =
+    Physics_system.update_physics ~time_scale ~world:world0
+  in
+  let world2, collisions2 =
+    Engine.step_with_collisions ~dt world0
+  in
+  match (world1, world2) with
+  | [ b1 ], [ b2 ] ->
+      approx_vec (Body.pos b1) (Body.pos b2);
+      assert_equal
+        (List.length collisions2)
+        (List.length collisions1)
+  | _ -> assert_failure "Expected single-body worlds"
+
+let test_physics_update_multi_step_matches_three_steps _ =
+  let b =
+    make_body ~pos:(vec (-10.) 0. 0.) ~vel:(vec 0. 0. 0.) ~mass:5. ()
+  in
+  let world0 = [ b ] in
+  let time_scale = 3.0 in
+  let world_physics, _ =
+    Physics_system.update_physics ~time_scale ~world:world0
+  in
+  let rec three_steps w n =
+    if n = 0 then w
+    else
+      let w', _ =
+        Engine.step_with_collisions ~dt:Physics_system.fixed_dt w
+      in
+      three_steps w' (n - 1)
+  in
+  let world_expected = three_steps world0 3 in
+  match (world_physics, world_expected) with
+  | [ b1 ], [ b2 ] ->
+      approx_vec (Body.pos b1) (Body.pos b2)
+  | _ -> assert_failure "Expected single-body worlds"
+
+let test_physics_update_trails_adds_and_limits_length _ =
+  let body =
+    make_body ~pos:(vec 1. 0. 0.) ~vel:(vec 0. 0. 0.) ~mass:1. ()
+  in
+  let world = [ body ] in
+  let initial_trail = [ vec 0. 0. 0. ] in
+  let trails, _ =
+    Physics_system.update_trails [ initial_trail ] world []
+  in
+  (match trails with
+  | [ t ] ->
+      assert_equal 2 (List.length t);
+      approx_vec (List.hd t) (Body.pos body)
+  | _ -> assert_failure "Expected one trail");
+
+
+  let long_trail =
+    List.init 105 (fun i -> vec (float_of_int i) 0. 0.)
+  in
+  let trails2, _ =
+    Physics_system.update_trails [ long_trail ] world []
+  in
+  match trails2 with
+  | [ t ] -> assert_equal 100 (List.length t)
+  | _ -> assert_failure "Expected one trail"
+
+let test_physics_is_colliding_wrapper _ =
+  (* Non-colliding case *)
+  let b1 =
+    make_body ~pos:(vec 0. 0. 0.) ~vel:(vec 0. 0. 0.) ~mass:1. ~radius:1. ()
+  in
+  let b2 =
+    make_body ~pos:(vec 10. 0. 0.) ~vel:(vec 0. 0. 0.) ~mass:1. ~radius:1. ()
+  in
+  assert_bool "no collision"
+    (not (Physics_system.is_colliding [ b1; b2 ]));
+
+  (* Colliding case *)
+  let b3 =
+    make_body ~pos:(vec 0. 0. 0.) ~vel:(vec 0. 0. 0.) ~mass:1. ~radius:5. ()
+  in
+  let b4 =
+    make_body ~pos:(vec 8. 0. 0.) ~vel:(vec 0. 0. 0.) ~mass:1. ~radius:5. ()
+  in
+  assert_bool "collision detected"
+    (Physics_system.is_colliding [ b3; b4 ])
+
+
 (* ---------- Suite ---------- *)
 
 let suite =
@@ -181,6 +373,40 @@ let suite =
          "collision_not_touching" >:: test_collision_not_touching;
          "find_collisions_none" >:: test_find_collisions_none;
          "find_collisions_one_pair" >:: test_find_collisions_one_pair;
+
+         (* Scenario tests *)
+         "scenario_calculate_mass_basic"
+         >:: test_scenario_calculate_mass_basic;
+         "scenario_get_by_name_known"
+         >:: test_scenario_get_by_name_known_names;
+         "scenario_get_by_name_unknown_default"
+         >:: test_scenario_get_by_name_unknown_uses_default;
+         "scenario_collision_two_bodies"
+         >:: test_scenario_collision_course_two_bodies;
+
+         (* Simulation_state tests *)
+         "state_initial_defaults" >:: test_state_initial_defaults;
+         "state_time_scale_and_pause"
+         >:: test_state_time_scale_and_pause;
+         "state_pending_changes_after_update"
+         >:: test_state_pending_changes_after_update;
+         "state_apply_params_clears_pending"
+         >:: test_state_apply_params_clears_pending;
+         "state_cycle_selected_planet_wraps"
+         >:: test_state_cycle_selected_planet_wraps;
+         "state_trail_render_info"
+         >:: test_state_trail_render_info_active_and_orphaned;
+
+         (* Physics_system tests *)
+         "physics_update_small_time_scale"
+         >:: test_physics_update_small_time_scale_single_step;
+         "physics_update_multi_step"
+         >:: test_physics_update_multi_step_matches_three_steps;
+         "physics_update_trails"
+         >:: test_physics_update_trails_adds_and_limits_length;
+         "physics_is_colliding_wrapper"
+         >:: test_physics_is_colliding_wrapper;
        ]
+
 
 let () = run_test_tt_main suite
